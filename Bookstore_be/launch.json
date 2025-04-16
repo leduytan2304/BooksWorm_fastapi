@@ -1,0 +1,16 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+      {
+        "name": "Python: FastAPI",
+        "type": "python",
+        "request": "launch",
+        "program": "uvicorn",
+        "args": [
+          "main:app", // Replace with the correct path to your FastAPI app
+          "--reload"
+        ],
+       "jinja":false
+      }
+    ]
+  }
