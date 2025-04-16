@@ -59,6 +59,7 @@ from database import get_db
 from models import User as UserModel
 from sqlalchemy.orm import Session
 from typing import Optional
+from fastapi.responses import JSONResponse
 
 class UserCreate(BaseModel):
     email: str
@@ -181,3 +182,13 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
     if not user:
         raise credentials_exception
     return user
+
+@router.post("/logout")
+def logout(token: str = Depends(oauth2_scheme)):
+    # In a stateless JWT setup, the server doesn't actually need to do anything
+    # The client is responsible for discarding the token
+    # However, we can return a success response to confirm the action
+    return JSONResponse(
+        status_code=status.HTTP_200_OK,
+        content={"message": "Successfully logged out"}
+    )
