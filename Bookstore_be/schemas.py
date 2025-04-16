@@ -6,14 +6,14 @@ class BookBase(BaseModel):
     book_title: Optional[str] = None
     book_summary: Optional[str] = None
     book_price: Optional[float] = None  # Make book_price optional
-    book_cover_photo: Optional[str] = None
-    author_id: Optional[int] = None  # Make author_id optional
+    book_cover_photo: Optional[str] = None 
     category_id: Optional[int] = None
 
 class Discount(BaseModel):
     discount_price: float
     expire_date: Optional[datetime]
-
+    class Config:
+        orm_mode = True
 class Book(BookBase):
     id: int
     discounts: List[Discount] = []  # Use List instead of list for type hinting
