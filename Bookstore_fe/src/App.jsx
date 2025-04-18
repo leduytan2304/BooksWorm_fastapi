@@ -6,7 +6,9 @@ import OnSale from './components/OnSale'
 import Feature from './components/Feature'
 import ShopPage from "./components/ShopPage/ShopPage"
 import Navbar from './components/Navbar'
+import Login from './components/Login'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
+import ProductDetail from './components/ProductDetail'
 
 export default function App() {
   return (
@@ -21,11 +23,13 @@ export default function App() {
               <OnSale/>
               <Feature/>
               <ShopPage/>
+              <ProductDetail/>
+              
             </>
           } />
           <Route path="/about" element={<About />} />
           <Route path="/shop" element={<ShopPage />} />
-          <Route path="/login" element={<div className="container mx-auto py-20 mt-20">Login Page Coming Soon</div>} />
+          <Route path="/login" element={<Login/>} />
         </Routes>
       </div>
     </Router>

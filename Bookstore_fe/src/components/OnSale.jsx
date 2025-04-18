@@ -1,6 +1,9 @@
 import { React, useEffect, useState } from "react";
 import { assets, projectsData } from "../assets/assets";
 import { PlayIcon } from "@heroicons/react/24/solid";
+
+
+
 const OnSale = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardsToShow, setCardsToShow] = useState(1);
