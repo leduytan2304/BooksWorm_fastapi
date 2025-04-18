@@ -28,7 +28,9 @@ export default function Navbar() {
             Shop
           </Link>
           <button className="hidden md:block bg-white text-black px-8 py-2 rounded-full">
+          <Link to="/login" className="cursor-pointer hover:text-gray-400">
             Login
+          </Link>
           </button>
         </ul>
 
