@@ -7,7 +7,8 @@ from routers import auth
 from starlette.middleware.sessions import SessionMiddleware
 from fastapi.middleware.cors import CORSMiddleware
 from routers.config import settings
-
+from routers import author
+from routers import order
 
 app = FastAPI()
 
@@ -20,4 +21,6 @@ app.add_middleware(
 )
 
 app.include_router(books.router, prefix="/api", tags=["/books"])
-app.include_router(auth.router)
+app.include_router(author.router, prefix="/api", tags=["/authors"])
+app.include_router(auth.router, prefix="/api", tags=["/auth"])
+app.include_router(order.router, prefix="/api", tags=["/orders"])

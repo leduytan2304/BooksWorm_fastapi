@@ -37,16 +37,9 @@ const Project = () => {
     >
       <h1 className="text-2xl sm:text-4xl font-bold-100 mb-2 text-left">
         On Sale
-        {/* <span className="underline underline-offset-4 decoration-1 under-font-light">
-          Completed
-        </span> */}
+       
       </h1>
-      {/* <p
-        className="text-center text-gray-500 mb-8 max-w-80 
-            mx-auto"
-      > 
-        Crafting spaces, building legacies-Explore Our Portflio
-      </p> */}
+      
 
       
       {/* slider buttons */}

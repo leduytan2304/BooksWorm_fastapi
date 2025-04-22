@@ -1,3 +1,4 @@
+
 from fastapi import APIRouter, Depends, HTTPException,Query
 from sqlalchemy.orm import Session
 from schemas import Book
@@ -5,59 +6,636 @@ from models import Book as BookModel, Discount, Review
 from database import get_db
 from typing import List
 from sqlalchemy.orm import joinedload
+from sqlalchemy import func
 from typing import Optional
 import psycopg2
 from psycopg2.extras import RealDictCursor
 from database import SQLALCHEMY_DATABASE_URL
+from sqlalchemy import text
 
 router = APIRouter()
 
 
 @router.get("/books", response_model=list[Book])
-async def get_books(sort_by : Optional[str] = Query('discount_desc', description = 
+async def get_books(filterBy : Optional[str] = Query('discount_desc', description = 
                                                            "sort_option: 'discount_desc'," \
-                                                           " 'popular_desc', 'final_price_asc', 'final_price_desc'"),
+                     " 'popular_desc', 'final_price_asc', 'final_price_desc'," \
+                                                           "recommended, 'popular'"),
+                    star: Optional[float] = Query(None, ge=0, le=5, description="Minimum average rating star"),
                     # page: int = Query(1, ge=1, description="Page number"),
                     # per_page: int = Query(5, ge=1,  description="Number of books per page: (5,10,15,20)"),
                    
                     db: Session = Depends(get_db)):
     try:
        
-       query = db.query(BookModel).options(joinedload(BookModel.discounts))
+         if star is not None:
+            sql_query = text("""
+                SELECT 
+                    b.id,
+                    b.book_title,
+                    b.book_summary,
+                    b.book_price,
+                    b.book_cover_photo,
+                    b.category_id,
+                    b.author_id,
+                    a.author_name,
+                    COALESCE(AVG(r.rating_star::FLOAT), 0) AS avg_rating,
+                    COALESCE(
+                        json_agg(
+                            DISTINCT jsonb_build_object(
+                                'discount_price', d.discount_price,
+                                'discount_end_date', d.discount_end_date
+                            )
+                        ) FILTER (WHERE d.discount_price IS NOT NULL), '[]'
+                    ) AS discounts,
+                    json_build_object(
+                        'id', a.id,
+                        'author_name', a.author_name
+                    ) AS author
+                FROM book b
+                LEFT JOIN review r ON b.id = r.book_id
+                LEFT JOIN discount d ON b.id = d.book_id
+                JOIN author a ON b.author_id = a.id
+                GROUP BY 
+                    b.id, 
+                    b.book_title,
+                    b.book_summary,
+                    b.book_price,
+                    b.book_cover_photo,
+                    b.category_id,
+                    b.author_id,
+                    a.id,
+                    a.author_name
+                HAVING COALESCE(AVG(r.rating_star::FLOAT), 0) >= :star
+                ORDER BY avg_rating asc
+            """)
+            result = db.execute(sql_query, {"star": star})
+            books = result.fetchall()
+            
+            if not books:
+                raise HTTPException(status_code=404, detail="No books found")
+            return [dict(row._mapping) for row in books]
+                                  
        
-       if sort_by:
+    
+         elif filterBy:
+       
          
-         if sort_by == 'discount_desc':
-            query = query.join(BookModel.discounts)\
-            .order_by((BookModel.book_price - Discount.discount_price).desc())
-         elif sort_by == 'popular_desc':
-                query = query.outerjoin(BookModel.reviews)\
-                    .outerjoin(BookModel.discounts)\
-                    .group_by(BookModel.id, Discount.discount_price)\
-                    .order_by(
-                        func.count(Review.id).desc(),
-                        (BookModel.book_price - func.coalesce(Discount.discount_price, 0)).asc()
-                    )
-         elif sort_by == 'final_price_asc':
-                query = query.join(BookModel.discounts)\
-                    .order_by(Discount.discount_price.asc())
-            
-         elif sort_by == 'final_price_desc':
-                query = query.join(BookModel.discounts)\
-                    .order_by(Discount.discount_price.desc())
-         else:
-                raise HTTPException(status_code=400, detail="Invalid sort parameter")
-                
-       else:
-                raise HTTPException(status_code=400, detail="Invalid sort parameter")
+            if filterBy == 'discount_desc':
+                sql_query = text("""
+                    SELECT 
+        b.id,
+        b.book_title,
+        b.book_summary,
+        b.book_price,
+        b.book_cover_photo,
+        b.category_id,
+        b.author_id,
+        a.author_name,
+        json_agg(
+            json_build_object(
+                'discount_price', d.discount_price,
+                'discount_end_date', d.discount_end_date
+            )
+        ) as discounts,
+        json_build_object(
+            'id', a.id,
+            'author_name', a.author_name
+        ) as author,
+        MIN(d.discount_price) as min_discount_price,  -- for sorting
+        MAX(b.book_price - d.discount_price) as max_discount_amount  -- for sorting
+    FROM book b
+    JOIN discount d ON b.id = d.book_id
+    JOIN author a ON b.author_id = a.id
+    GROUP BY 
+        b.id, 
+        b.book_title,
+        b.book_summary,
+        b.book_price,
+        b.book_cover_photo,
+        b.category_id,
+        b.author_id,
+        a.id,
+        a.author_name
+    ORDER BY 
+        max_discount_amount DESC,
+        min_discount_price ASC;
 
-       books = query.all()
-       if not books:
-            raise HTTPException(status_code=404, detail="No books found")
+                """)
+                
+                result = db.execute(sql_query)
+                books = result.fetchall()
+                return books
+
+            elif filterBy == 'popular_desc':
+                sql_query = text("""
+                    SELECT
+                    b.id,
+                    b.book_title,
+                    b.book_summary,
+                    b.book_price,
+                    b.book_cover_photo,
+                    b.category_id,
+                    b.author_id,
+                    a.author_name,
+                    json_agg(
+                        json_build_object(
+                            'discount_price', d.discount_price,
+                            'discount_end_date', d.discount_end_date
+                        )
+                    ) as discounts,
+                    json_build_object(
+                        'id', a.id,
+                        'author_name', a.author_name
+                    ) as author,
+                    COUNT(r.id) as review_count
+                FROM book b
+                LEFT JOIN review r ON b.id = r.book_id
+                LEFT JOIN discount d ON b.id = d.book_id
+                JOIN author a ON b.author_id = a.id
+                GROUP BY
+                    b.id,
+                    b.book_title,
+                    b.book_summary,
+                    b.book_price,
+                    b.book_cover_photo,
+                    b.category_id,
+                    b.author_id,
+                    a.id,
+                    a.author_name,
+                    d.discount_price
+                ORDER BY
+                    COUNT(r.id) DESC,
+                    (b.book_price - COALESCE(d.discount_price, 0)) ASC;"""
+                            )
+                result = db.execute(sql_query)
+                books = result.fetchall()
+                return books
+
+            elif filterBy == 'final_price_asc':
+                    # query = query.join(BookModel.discounts)\
+                    #     .order_by(Discount.discount_price.asc())
+                    sql_query = text("""
+                    SELECT 
+                        b.id,
+                        b.book_title,
+                        b.book_summary,
+                        b.book_price,
+                        b.book_cover_photo,
+                        b.category_id,
+                        b.author_id,
+                        a.author_name,
+                        json_agg(
+                            json_build_object(
+                                'discount_price', d.discount_price,
+                                'discount_end_date', d.discount_end_date
+                            )
+                        ) as discounts,
+                        json_build_object(
+                            'id', a.id,
+                            'author_name', a.author_name
+                        ) as author
+                    FROM book b
+                    JOIN discount d ON b.id = d.book_id
+                    JOIN author a ON b.author_id = a.id
+                    GROUP BY 
+                        b.id, 
+                        b.book_title,
+                        b.book_summary,
+                        b.book_price,
+                        b.book_cover_photo,
+                        b.category_id,
+                        b.author_id,
+                        a.id,
+                        a.author_name
+                    ORDER BY 
+                        MIN(d.discount_price) ASC;""")
+                    result = db.execute(sql_query)
+                    books = result.fetchall()
+                    return books
+            elif filterBy == 'final_price_desc':
+                    sql_query = text("""
+                                SELECT 
+                        b.id,
+                        b.book_title,
+                        b.book_summary,
+                        b.book_price,
+                        b.book_cover_photo,
+                        b.category_id,
+                        b.author_id,
+                        a.author_name,
+                        json_agg(
+                            json_build_object(
+                                'discount_price', d.discount_price,
+                                'discount_end_date', d.discount_end_date
+                            )
+                        ) as discounts,
+                        json_build_object(
+                            'id', a.id,
+                            'author_name', a.author_name
+                        ) as author
+                    FROM book b
+                    JOIN discount d ON b.id = d.book_id
+                    JOIN author a ON b.author_id = a.id
+                    GROUP BY 
+                        b.id, 
+                        b.book_title,
+                        b.book_summary,
+                        b.book_price,
+                        b.book_cover_photo,
+                        b.category_id,
+                        b.author_id,
+                        a.id,
+                        a.author_name
+                    ORDER BY 
+                        MAX(d.discount_price) DESC;""")
+                    result = db.execute(sql_query)
+                    books = result.fetchall()
+                    return books
+
+    #         elif filterBy == 'recommended':
+    #                 sql_query = text("""
+    # SELECT 
+    #     b.id,
+    #     b.book_title,
+    #     b.book_summary,
+    #     b.book_price,
+    #     b.book_cover_photo,
+    #     b.category_id,
+    #     b.author_id,
+    #     a.author_name,
+    #     COALESCE(AVG(r.rating_star::FLOAT), 0) AS avg_rating,
+    #     MIN(d.discount_price) AS final_price,
+    #     COALESCE(
+    #         json_agg(
+    #             DISTINCT jsonb_build_object(
+    #                 'discount_price', d.discount_price,
+    #                 'discount_end_date', d.discount_end_date
+    #             )
+    #         ) FILTER (WHERE d.discount_price IS NOT NULL), '[]'
+    #     ) AS discounts,
+    #     json_build_object(
+    #         'id', a.id,
+    #         'author_name', a.author_name
+    #     ) AS author
+    # FROM book b
+    # LEFT JOIN review r ON b.id = r.book_id
+    # LEFT JOIN discount d ON b.id = d.book_id
+    # JOIN author a ON b.author_id = a.id
+    # GROUP BY 
+    #     b.id, 
+    #     b.book_title,
+    #     b.book_summary,
+    #     b.book_price,
+    #     b.book_cover_photo,
+    #     b.category_id,
+    #     b.author_id,
+    #     a.id,
+    #     a.author_name
+    # ORDER BY avg_rating DESC, final_price ASC
+    # LIMIT 8;
+    #                             """)
+    #                 result = db.execute(sql_query)
+    #                 books = result.fetchall()
+    #                 return books       
             
-       return books
+            elif filterBy == 'popular':
+                    sql_query = text("""
+    SELECT  
+    b.id,
+    b.book_title,
+    b.book_summary,
+    b.book_price,
+    b.book_cover_photo,
+    b.category_id,
+    b.author_id,
+    a.author_name,
+    COUNT(r.id) AS review_count,
+    COALESCE(AVG(r.rating_star::FLOAT), 0) AS avg_rating,
+    MIN(d.discount_price) AS final_price,
+    COALESCE(
+        json_agg(
+            DISTINCT jsonb_build_object(
+                'discount_price', d.discount_price,
+                'discount_end_date', d.discount_end_date
+            )
+        ) FILTER (WHERE d.discount_price IS NOT NULL), '[]'
+    ) AS discounts,
+    json_build_object(
+        'id', a.id,
+        'author_name', a.author_name
+    ) AS author
+FROM book b
+LEFT JOIN review r ON b.id = r.book_id
+LEFT JOIN discount d ON b.id = d.book_id
+JOIN author a ON b.author_id = a.id
+GROUP BY 
+    b.id, 
+    b.book_title,
+    b.book_summary,
+    b.book_price,
+    b.book_cover_photo,
+    b.category_id,
+    b.author_id,
+    a.id,
+    a.author_name
+ORDER BY review_count DESC, final_price ASC
+LIMIT 8;
+
+                                """)
+                    result = db.execute(sql_query)
+                    books = result.fetchall()
+                    return books
+            else:
+                raise HTTPException(status_code=400, detail="Invalid sort parameter")
+       
+       
+      
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+@router.get("/books/recommended", response_model=list[Book])
+async def get_recommended_books(db: Session = Depends(get_db)):
+    try:
+            sql_query = text("""
+            SELECT 
+                b.id,
+                b.book_title,
+                b.book_summary,
+                b.book_price,
+                b.book_cover_photo,
+                b.category_id,
+                b.author_id,
+                a.author_name,
+                COALESCE(AVG(r.rating_star::FLOAT), 0) AS avg_rating,
+                MIN(d.discount_price) AS final_price,
+                COALESCE(
+                    json_agg(
+                        DISTINCT jsonb_build_object(
+                            'discount_price', d.discount_price,
+                            'discount_end_date', d.discount_end_date
+                        )
+                    ) FILTER (WHERE d.discount_price IS NOT NULL), '[]'
+                ) AS discounts,
+                json_build_object(
+                    'id', a.id,
+                    'author_name', a.author_name
+                ) AS author
+            FROM book b
+            LEFT JOIN review r ON b.id = r.book_id
+            LEFT JOIN discount d ON b.id = d.book_id
+            JOIN author a ON b.author_id = a.id
+            GROUP BY 
+                b.id, 
+                b.book_title,
+                b.book_summary,
+                b.book_price,
+                b.book_cover_photo,
+                b.category_id,
+                b.author_id,
+                a.id,
+                a.author_name
+            ORDER BY avg_rating DESC, final_price ASC
+            LIMIT 8;
+                                        """)
+            result = db.execute(sql_query)
+            books = result.fetchall()
+            return books
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
-   
+@router.get("/books/popular",response_model=list[Book])
+async def get_popular_books(db: Session = Depends(get_db)):
+     try:
+        sql_query = text("""
+    SELECT  
+    b.id,
+    b.book_title,
+    b.book_summary,
+    b.book_price,
+    b.book_cover_photo,
+    b.category_id,
+    b.author_id,
+    a.author_name,
+    COUNT(r.id) AS review_count,
+    COALESCE(AVG(r.rating_star::FLOAT), 0) AS avg_rating,
+    MIN(d.discount_price) AS final_price,
+    COALESCE(
+        json_agg(
+            DISTINCT jsonb_build_object(
+                'discount_price', d.discount_price,
+                'discount_end_date', d.discount_end_date
+            )
+        ) FILTER (WHERE d.discount_price IS NOT NULL), '[]'
+    ) AS discounts,
+    json_build_object(
+        'id', a.id,
+        'author_name', a.author_name
+    ) AS author
+FROM book b
+LEFT JOIN review r ON b.id = r.book_id
+LEFT JOIN discount d ON b.id = d.book_id
+JOIN author a ON b.author_id = a.id
+GROUP BY 
+    b.id, 
+    b.book_title,
+    b.book_summary,
+    b.book_price,
+    b.book_cover_photo,
+    b.category_id,
+    b.author_id,
+    a.id,
+    a.author_name
+ORDER BY review_count DESC, final_price ASC
+LIMIT 8;
+
+                                """)
+        result = db.execute(sql_query)
+        books = result.fetchall()
+        return books
+     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) 
+     
+@router.get("/books/category", response_model=list[Book])
+async def get_books_by_category(category_id: int, db: Session = Depends(get_db)):
+    try:
+        sql_query = text("""
+            SELECT 
+                b.id,
+                b.book_title,
+                b.book_summary,
+                b.book_price,
+                b.book_cover_photo,
+                b.category_id,
+                b.author_id,
+                a.author_name,
+                json_agg(
+                    json_build_object(
+                        'discount_price', d.discount_price,
+                        'discount_end_date', d.discount_end_date
+                    )
+                ) as discounts,
+                json_build_object(
+                    'id', a.id,
+                    'author_name', a.author_name
+                ) as author
+            FROM book b
+            JOIN discount d ON b.id = d.book_id
+            JOIN author a ON b.author_id = a.id
+            WHERE b.category_id = :category_id
+            GROUP BY 
+                b.id, 
+                b.book_title,
+                b.book_summary,
+                b.book_price,
+                b.book_cover_photo,
+                b.category_id,
+                b.author_id,
+                a.id,
+                a.author_name
+        """)
+        result = db.execute(sql_query, {"category_id": category_id})
+        books = result.fetchall()
+        return books
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+@router.get("/books/onsale", response_model=List[Book])
+async def get_onsale_books(db: Session = Depends(get_db)):
+     try:
+        sql_query = text("""
+                	SELECT 
+                b.id,
+                b.book_title,
+                b.book_summary,
+                b.book_price,
+                b.book_cover_photo,
+                b.category_id,
+                b.author_id,
+                a.author_name,
+                json_agg(
+                    json_build_object(
+                        'discount_price', d.discount_price,
+                        'discount_end_date', d.discount_end_date
+                    )
+                ) as discounts,
+                json_build_object(
+                    'id', a.id,
+                    'author_name', a.author_name
+                ) as author,
+                (b.book_price - d.discount_price) AS sub_price
+            FROM book b
+            JOIN discount d ON b.id = d.book_id
+            JOIN author a ON b.author_id = a.id
+            GROUP BY 
+                b.id, 
+                b.book_title,
+                b.book_summary,
+                b.book_price,
+                b.book_cover_photo,
+                b.category_id,
+                b.author_id,
+                a.id,
+                a.author_name,
+                d.discount_price
+            ORDER BY 
+                sub_price DESC
+            LIMIT 10
+        """)
+        result = db.execute(sql_query)
+        books = result.fetchall()
+        return books
+     except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))     
+    
+@router.get("/books/{book_id}", response_model=Book)
+async def get_book(book_id: int, db: Session = Depends(get_db)):
+    try:
+        sql_query = text("""
+SELECT 
+        b.id,
+        b.book_title,
+        b.book_summary,
+        b.book_price,
+        b.book_cover_photo,
+        b.category_id,
+        b.author_id,
+        a.author_name,
+        json_agg(
+            json_build_object(
+                'discount_price', d.discount_price,
+                'discount_end_date', d.discount_end_date
+            )
+        ) as discounts,
+        json_build_object(
+            'id', a.id,
+            'author_name', a.author_name
+        ) as author
+    FROM book b
+    JOIN discount d ON b.id = d.book_id
+    JOIN author a ON b.author_id = a.id
+    WHERE b.id = :book_id
+    GROUP BY 
+        b.id, 
+        b.book_title,
+        b.book_summary,
+        b.book_price,
+        b.book_cover_photo,
+        b.category_id,
+        b.author_id,
+        a.id,
+        a.author_name
+""")
+        result = db.execute(sql_query, {"book_id": book_id})
+        book = result.fetchone()
+        
+        if not book:
+            raise HTTPException(status_code=404, detail="Book not found")
+        return book
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))    
+
+
+@router.get("/books/author/{author_id}", response_model=list[Book])
+async def get_books_by_author(author_id: int, db: Session = Depends(get_db)):
+    try:
+        sql_query = text("""
+            SELECT 
+                b.id,
+                b.book_title,
+                b.book_summary,
+                b.book_price,
+                b.book_cover_photo,
+                b.category_id,
+                b.author_id,
+                a.author_name,
+                json_agg(
+                    json_build_object(
+                        'discount_price', d.discount_price,
+                        'discount_end_date', d.discount_end_date
+                    )
+                ) as discounts,
+                json_build_object(
+                    'id', a.id,
+                    'author_name', a.author_name
+                ) as author
+            FROM book b
+            JOIN discount d ON b.id = d.book_id
+            JOIN author a ON b.author_id = a.id
+            WHERE b.author_id = :author_id
+            GROUP BY 
+                b.id, 
+                b.book_title,
+                b.book_summary,
+                b.book_price,
+                b.book_cover_photo,
+                b.category_id,
+                b.author_id,
+                a.id,
+                a.author_name
+        """)
+        result = db.execute(sql_query, {"author_id": author_id})
+        books = result.fetchall()
+        return books
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

@@ -23,13 +23,15 @@ export default function App() {
               <OnSale/>
               <Feature/>
               <ShopPage/>
-              <ProductDetail/>
+             
               
             </>
           } />
           <Route path="/about" element={<About />} />
-          <Route path="/shop" element={<ShopPage />} />
+          <Route path="/product" element={<ShopPage />} />
           <Route path="/login" element={<Login/>} />
+          <Route path="/product/:id" element={<ProductDetail/>} />
+          
         </Routes>
       </div>
     </Router>

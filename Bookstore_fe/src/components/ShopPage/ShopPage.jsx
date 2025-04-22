@@ -39,15 +39,21 @@ export default function ShopPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch('http://localhost:8000/api/books')
-      .then(res => res.json())
-      .then(data => {
-        setBooks(data);
-        setLoading(false)
-        console.log(data);
-        
-      })
-      .catch(() => setLoading(false));
+    const fetchBooks = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get('http://localhost:8000/api/books');
+        setBooks(response.data);
+        console.log(response.data);
+      } catch (err) {
+        console.error('Error fetching books:', err);
+        setError('Failed to load books');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBooks();
   }, []);
 
   return (
@@ -107,7 +113,7 @@ export default function ShopPage() {
               <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'>
                 
                 {books.map((book) => (
-                  <Card key={Book.id} book={book} />
+                  <Card key={book.id} book={book} />
                 ))}
               </div>
             )}

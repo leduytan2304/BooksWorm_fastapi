@@ -1,7 +1,7 @@
-from pydantic import BaseModel
-from typing import Optional, List
+from pydantic import BaseModel, EmailStr
+from typing import List, Optional
 from datetime import datetime
-
+from datetime import datetime, date
 class BookBase(BaseModel):
     book_title: Optional[str] = None
     book_summary: Optional[str] = None
@@ -11,12 +11,19 @@ class BookBase(BaseModel):
 
 class Discount(BaseModel):
     discount_price: float
-    expire_date: Optional[datetime]
+    discount_end_date: Optional[date]
     class Config:
         orm_mode = True
+class Author(BaseModel):
+    id: int
+    author_name:str
+    class Config:
+        orm_mode = True
+
 class Book(BookBase):
     id: int
     discounts: List[Discount] = []  # Use List instead of list for type hinting
+    author: Optional[Author]
     class Config:
         orm_mode = True
 
@@ -29,4 +36,77 @@ class User(BaseModel):
     password: str
     first_name: Optional[str]
     last_name: Optional[str]
-  
+
+# Order related schemas
+class OrderItemBase(BaseModel):
+    book_id: int
+    quantity: int
+    price: float
+
+class OrderItemCreate(OrderItemBase):
+    pass
+
+class OrderItemUpdate(BaseModel):
+    quantity: int
+
+class OrderItem(OrderItemBase):
+    id: int
+    order_id: int
+    
+    class Config:
+        orm_mode = True
+
+class OrderBase(BaseModel):
+    order_date: Optional[datetime] = None
+    order_amount: Optional[float] = None
+    status: Optional[str] = "CART"
+    shipping_address: Optional[str] = None
+    payment_method: Optional[str] = None
+
+class OrderCreate(OrderBase):
+    pass
+
+class OrderUpdate(BaseModel):
+    status: str
+
+class Order(OrderBase):
+    id: int
+    user_id: int
+    order_items: List[OrderItem] = []
+    
+    class Config:
+        orm_mode = True
+
+class OrderSummary(BaseModel):
+    id: int
+    order_date: datetime
+    order_amount: float
+    status: str = "CART"
+    
+    class Config:
+        orm_mode = True
+
+class OrderDetail(OrderSummary):
+    shipping_address: Optional[str] = None
+    payment_method: Optional[str] = None
+    order_items: List[OrderItem] = []
+    
+    class Config:
+        orm_mode = True
+
+class CartResponse(BaseModel):
+    id: int
+    order_items: List[OrderItem] = []
+    order_amount: float
+    
+    class Config:
+        orm_mode = True
+
+class CheckoutRequest(BaseModel):
+    shipping_address: str
+    payment_method: str
+    
+class CheckoutResponse(BaseModel):
+    order_id: int
+    status: str
+    message: str
