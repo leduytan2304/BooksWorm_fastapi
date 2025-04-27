@@ -1,31 +1,33 @@
 
-from fastapi import APIRouter, Depends, HTTPException,Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy.orm import Session
 from schemas import Book
 from models import Book as BookModel, Discount, Review
 from database import get_db
-from typing import List
-from sqlalchemy.orm import joinedload
-from sqlalchemy import func
-from typing import Optional
-import psycopg2
-from psycopg2.extras import RealDictCursor
-from database import SQLALCHEMY_DATABASE_URL
+from typing import List, Optional
 from sqlalchemy import text
+from enum import Enum
+
+class SortOption(str, Enum):
+    discount_desc = "discount_desc"
+    popular_desc = "popular_desc"
+    final_price_asc = "final_price_asc"
+    final_price_desc = "final_price_desc"
+    # recommended = "recommended"
+    # popular = "popular"
 
 router = APIRouter()
 
 
 @router.get("/books", response_model=list[Book])
-async def get_books(filterBy : Optional[str] = Query('discount_desc', description = 
-                                                           "sort_option: 'discount_desc'," \
-                     " 'popular_desc', 'final_price_asc', 'final_price_desc'," \
-                                                           "recommended, 'popular'"),
-                    star: Optional[float] = Query(None, ge=0, le=5, description="Minimum average rating star"),
-                    # page: int = Query(1, ge=1, description="Page number"),
-                    # per_page: int = Query(5, ge=1,  description="Number of books per page: (5,10,15,20)"),
-                   
-                    db: Session = Depends(get_db)):
+async def get_books(
+    filterBy: SortOption = Query(
+        SortOption.discount_desc, 
+        description="Sort option for books"
+    ),
+    star: Optional[float] = Query(None, ge=0, le=5, description="Minimum average rating star"),
+    db: Session = Depends(get_db)
+):
     try:
        
          if star is not None:
