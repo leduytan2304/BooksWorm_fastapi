@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import Card from './Card';
 import Pagination from './Pagination';
 
-function Dropdown() {
+function Dropdown({ selectedOption, setSelectedOption }) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selectedOption, setSelectedOption] = useState('Select Filter');
 
   const toggleDropdown = () => setIsOpen(!isOpen);
 
@@ -22,11 +22,12 @@ function Dropdown() {
         {selectedOption}
       </button>
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-lg">
+        <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-lg z-10">
           <ul className="text-sm">
-            <li className="px-4 py-2 hover:bg-gray-200 cursor-pointer" onClick={() => handleSelect('Option 1')}>Option 1</li>
-            <li className="px-4 py-2 hover:bg-gray-200 cursor-pointer" onClick={() => handleSelect('Option 2')}>Option 2</li>
-            <li className="px-4 py-2 hover:bg-gray-200 cursor-pointer" onClick={() => handleSelect('Option 3')}>Option 3</li>
+            <li className="px-4 py-2 hover:bg-gray-200 cursor-pointer" onClick={() => handleSelect('discount_desc')}>discount_desc</li>
+            <li className="px-4 py-2 hover:bg-gray-200 cursor-pointer" onClick={() => handleSelect('popular_desc')}>popular_desc</li>
+            <li className="px-4 py-2 hover:bg-gray-200 cursor-pointer" onClick={() => handleSelect('final_price_asc')}>final_price_asc</li>
+            <li className="px-4 py-2 hover:bg-gray-200 cursor-pointer" onClick={() => handleSelect('final_price_desc')}>final_price_desc</li>
           </ul>
         </div>
       )}
@@ -37,41 +38,42 @@ function Dropdown() {
 export default function ShopPage() {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [selectedOption, setSelectedOption] = useState('discount_desc');
+  const [page, setPage] = useState(8);
 
   useEffect(() => {
     const fetchBooks = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('http://localhost:8000/api/books');
+        const response = await axios.get(`http://localhost:8000/api/books?filterBy=${selectedOption}`);
         setBooks(response.data);
-        console.log(response.data);
       } catch (err) {
         console.error('Error fetching books:', err);
-        setError('Failed to load books');
       } finally {
         setLoading(false);
       }
     };
 
     fetchBooks();
-  }, []);
+  }, [selectedOption]);
 
   return (
     <>
-      <div className="container relative mx-auto py-4 pt-20 px-6 md:px-20 lg:px-32 my-20 w-full " id="Projects">
+      <div className="container relative mx-auto py-4 pt-20 px-6 md:px-20 lg:px-32 my-20 w-full" id="Projects">
         <div className="flex justify-between items-center mb-6 border-b border-gray-400">
           <h1 className="text-2xl sm:text-4xl font-bold mb-2 text-left">Shop Page</h1>
         </div>
-        
+
         {/* Filter Section */}
         <div className="flex justify-between items-center mb-6">
           <p className="text-lg">Filter By</p>
           <div>
-            <Dropdown />
-            <Dropdown />
+            <Dropdown selectedOption={selectedOption} setSelectedOption={setSelectedOption} />
+            <Dropdown selectedOption={selectedOption} setSelectedOption={setSelectedOption} />
+            {/* You had 2 dropdowns; remove one if not needed */}
           </div>
         </div>
-        
+
         {/* Flex Layout Section */}
         <div className='flex flex-row '>
           <div className="mr-10 flex-[1] hidden md:block">
@@ -106,12 +108,10 @@ export default function ShopPage() {
             </div>
           </div>
           <div className='flex-[5]'>
-            
             {loading ? (
               <div className="text-center py-10">Loading...</div>
             ) : (
               <div className='grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4'>
-                
                 {books.map((book) => (
                   <Card key={book.id} book={book} />
                 ))}
@@ -120,8 +120,9 @@ export default function ShopPage() {
           </div>
         </div>
       </div>
+
       <div className='mt-10 flex justify-center items-center'>
-        <Pagination/>
+        <Pagination />
       </div>
     </>
   );
