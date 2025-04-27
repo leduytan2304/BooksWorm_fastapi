@@ -59,10 +59,12 @@ export default function Card({ book }) {
     book_summary,
     book_price,
     book_cover_photo,
-    discount,
+    discounts,
     author
   } = book;
   console.log(book);
+  console.log('discount: ', discounts[0].discount_price);
+
   const navigate = useNavigate();
   const handleClick = () =>{
     navigate(`/product/${id}`, { state: { bookId: id } });
@@ -70,8 +72,10 @@ export default function Card({ book }) {
   const formattedPrice = parseFloat(book_price).toFixed(2);
   
   
-  const discountedPrice = discount ? (book_price * (1 - discount / 100)).toFixed(2) : null;
-  console.log('discountedPrice: ' + discountedPrice);
+  const discount_price = discounts && discounts.length > 0 ? discounts[0].discount_price : null;
+  const discount_percentage = discounts && discounts.length > 0 ? discounts[0].discount_percentage : null;
+
+  console.log('discountedPrice: ' + discount_price);
   return (
     <divo onClick={handleClick} className="flex flex-col h-full rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 bg-white">
       <div className="relative w-full pb-[75%] overflow-hidden group">
@@ -80,9 +84,9 @@ export default function Card({ book }) {
           src={book_cover_photo} 
           alt={book_title} 
         />
-        {discount && (
+        {discount_percentage  && (
           <div className="absolute top-0 right-0 bg-red-500 text-white px-3 py-1 rounded-bl-lg font-medium">
-            {discount}% OFF
+            {discount_percentage }% OFF
           </div>
         )}
       </div>
@@ -95,10 +99,11 @@ export default function Card({ book }) {
       
       <div className="px-5 pb-4 mt-auto">
         <div className="flex items-center">
-          {discount ? (
+          {discount_price ? (
             <>
+            <span className="text-lg font-bold text-red-600 mr-2">${discount_price}</span>
               <span className="text-gray-400 line-through mr-2">${formattedPrice}</span>
-              <span className="text-lg font-bold text-red-600">${discountedPrice}</span>
+              
             </>
           ) : (
             <span className="text-lg font-bold text-gray-800">${formattedPrice}</span>
