@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
-
+import Card from "./ShopPage/Card";
 const Feature = () => {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -87,23 +87,13 @@ const Feature = () => {
       {!loading && !error && (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-8 p-8 border-2 border-gray-500 box-border">
           {books.map((book, index) => (
-            <div key={book.id} className="relative">
-              <img
-                src={book.book_cover_photo}
-                alt={book.book_title}
-                className="w-full h-auto mb-14"
-              />
-              <div className="absolute left-0 right-0 bottom-5 flex justify-center">
-                <div className="inline-block bg-white w-3/4 px-4 py-2 shadow-md">
-                  <h2 className="text-xl sm:text-lg md:text-xl font-semibold text-gray-800 text-center truncate">
-                    {book.book_title}
-                  </h2>
-                  <p className="text-gray-500 text-sm text-center">
-                    {getDisplayPrice(book)} <span className="mx-1">|</span> {book.author.author_name}
-                  </p>
-                </div>
-              </div>
-            </div>
+                             <div
+                             key={index}
+                             className="flex-shrink-0 px-2"
+                            
+                           >
+                             <Card book={book} />
+                           </div>
           ))}
         </div>
       )}

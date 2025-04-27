@@ -1,6 +1,7 @@
 from sqlalchemy import Boolean, Column, ForeignKey, Integer, String, Text, Numeric, Date, TIMESTAMP
 from sqlalchemy.orm import relationship
 from sqlalchemy.dialects.postgresql import BIGINT
+from sqlalchemy.schema import Sequence
 from pydantic import BaseModel, EmailStr
 from database import Base
 
@@ -54,7 +55,7 @@ class Book(Base):
 class Order(Base):
     __tablename__ = "order"
 
-    id = Column(BIGINT, primary_key=True, index=True)
+    id = Column(BIGINT, Sequence('order_id_seq'), primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
     order_date = Column(TIMESTAMP, nullable=False)
     order_amount = Column(Numeric(8, 2), nullable=False)

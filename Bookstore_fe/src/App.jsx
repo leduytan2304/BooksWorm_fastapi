@@ -7,6 +7,7 @@ import Feature from './components/Feature'
 import ShopPage from "./components/ShopPage/ShopPage"
 import Navbar from './components/Navbar'
 import Login from './components/Login'
+import Cart from './components/Cart'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import ProductDetail from './components/ProductDetail'
 
@@ -30,6 +31,7 @@ export default function App() {
           <Route path="/about" element={<About />} />
           <Route path="/product" element={<ShopPage />} />
           <Route path="/login" element={<Login/>} />
+          <Route path="/cart" element={<Cart/>} />
           <Route path="/product/:id" element={<ProductDetail/>} />
           
         </Routes>
