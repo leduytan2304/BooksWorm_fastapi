@@ -10,8 +10,9 @@ class BookBase(BaseModel):
     category_id: Optional[int] = None
 
 class Discount(BaseModel):
-    discount_price: float
-    discount_end_date: Optional[date]
+    discount_price: Optional[float] = None
+    discount_end_date: Optional[date] = None
+    
     class Config:
         orm_mode = True
 class Author(BaseModel):
@@ -38,10 +39,11 @@ class User(BaseModel):
     last_name: Optional[str]
 
 # # Order related schemas
-# class OrderItemBase(BaseModel):
-#     book_id: int
-#     quantity: int
-#     price: float
+class OrderItemCreate(BaseModel):
+    order_id : int
+    book_id: int
+    quantity: int
+    price: float
 
 # class OrderItemCreate(OrderItemBase):
 #     pass
@@ -102,8 +104,16 @@ class OrderSummary(BaseModel):
 #     class Config:
 #         orm_mode = True
 
-class OrderItemCreate(BaseModel):
-    user_id:int
-    order_date: date
-    order_amount:float
+# first attemp :v 
+
+# class OrderItemCreate(BaseModel):
+#     user_id:int
+#     order_date: date
+#     order_amount:float
+
+class OrderCreate(BaseModel):
+    order_amount: float
     
+    class Config:
+        orm_mode = True
+
