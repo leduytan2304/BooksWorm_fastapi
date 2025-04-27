@@ -86,6 +86,9 @@ export default function Navbar() {
           <Link to="/product" className="cursor-pointer hover:text-gray-400">
             Shop
           </Link>
+          <Link to="/cart" className="cursor-pointer hover:text-gray-400">
+            Cart
+          </Link>
           
           {isLoggedIn ? (
             <>
@@ -145,10 +148,17 @@ export default function Navbar() {
           </Link>
           <Link
             onClick={() => setShowMobileMenu(false)}
-            to="/projects"
+            to="/product"
             className="px-4 py-2 rounded-full inline-block"
           >
             Projects
+          </Link>
+          <Link
+            onClick={() => setShowMobileMenu(false)}
+            to="/product"
+            className="px-4 py-2 rounded-full inline-block"
+          >
+            Cart
           </Link>
           
           {isLoggedIn ? (
@@ -164,6 +174,7 @@ export default function Navbar() {
                 Logout
               </button>
             </>
+           
           ) : (
             <Link
               onClick={() => setShowMobileMenu(false)}
