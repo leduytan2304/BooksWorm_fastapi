@@ -67,6 +67,7 @@ class UserCreate(BaseModel):
     last_name: Optional[str] = None
 
 class UserOut(BaseModel):
+    id: int
     email: str
     first_name: Optional[str] = None
     last_name: Optional[str] = None
@@ -75,6 +76,7 @@ class UserOut(BaseModel):
         orm_mode = True
 
 class UserInDB(UserOut):
+    id: int
     hashed_password: str
 
 SECRET_KEY = settings.secret_key
@@ -104,7 +106,8 @@ def get_user(db: Session, email: str):
                 email=user.email,
                 hashed_password=user.password,
                 first_name=user.first_name,
-                last_name=user.last_name
+                last_name=user.last_name,
+                id=user.id  # Add this line to include the user ID
             )
         return None
     except Exception as e:
@@ -193,7 +196,8 @@ async def login_for_access_token(
     return {
         "access_token": access_token, 
         "token_type": "bearer",
-        "user_email": user.email
+        "user_email": user.email,
+        
     }
 
 @router.get("/users/me", response_model=UserOut)
