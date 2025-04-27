@@ -2,17 +2,203 @@ import React, { useState, useEffect } from 'react';
 import { MinusIcon, PlusIcon, ShoppingCartIcon } from '@heroicons/react/24/solid';
 import { useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
+import Cookies from 'js-cookie';
+
+// Add LoginPopup component
+function LoginPopup({ isOpen, onClose, onLogin }) {
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setIsLoading(true);
+    setError('');
+    
+    try {
+      const formData = new URLSearchParams();
+      formData.append('username', email); // Backend expects 'username' for email
+      formData.append('password', password);
+      
+      const response = await fetch('http://localhost:8000/api/token', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: formData,
+      });
+      
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.detail || 'Login failed');
+      }
+      
+      // Save token to cookies
+      Cookies.set('token', data.access_token, { 
+        expires: 7, 
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict'
+      });
+      
+      // Save user email to cookies
+      Cookies.set('userEmail', data.user_email || email, {
+        expires: 7,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict'
+      });
+      
+      onLogin();
+      onClose();
+    } catch (error) {
+      setError(error.message || 'Invalid email or password');
+      console.error('Login error:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+  
+  if (!isOpen) return null;
+  
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+        <h2 className="text-xl font-bold mb-4">Login Required</h2>
+        <p className="mb-4">Please login to add items to your cart</p>
+        
+        {error && <p className="text-red-500 mb-4">{error}</p>}
+        
+        <form onSubmit={handleLogin}>
+          <div className="mb-4">
+            <label className="block text-gray-700 mb-2">Email</label>
+            <input 
+              type="email" 
+              value={email} 
+              onChange={(e) => setEmail(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded"
+              required
+            />
+          </div>
+          <div className="mb-4">
+            <label className="block text-gray-700 mb-2">Password</label>
+            <input 
+              type="password" 
+              value={password} 
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full p-2 border border-gray-300 rounded"
+              required
+            />
+          </div>
+          <div className="flex justify-between">
+            <button 
+              type="button" 
+              onClick={onClose}
+              className="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded"
+            >
+              Cancel
+            </button>
+            <button 
+              type="submit" 
+              disabled={isLoading}
+              className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
+            >
+              {isLoading ? 'Logging in...' : 'Login'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 export default function ProductDetail(props) {
   const [quantity, setQuantity] = useState(1);
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(true);
-  const { id } = useParams();
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
+  const [userId, setUserId] = useState(null);
+  const { id: bookId } = useParams();
   const location = useLocation();
   
+  // Check if user is logged in and fetch user ID
+  useEffect(() => {
+    const token = Cookies.get('token');
+    setIsLoggedIn(!!token);
+    
+    if (token) {
+      fetchUserId(token);
+    }
+  }, []);
+  
+  // Function to fetch user ID
+  const fetchUserId = async (token) => {
+    try {
+      const response = await fetch('http://127.0.0.1:8000/api/users/me', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      if (response.ok) {
+        const userData = await response.json();
+        setUserId(userData.id);
+      } else {
+        console.error('Failed to fetch user data');
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+    }
+  };
   // Use props.bookId if provided directly, otherwise use location state or URL param
-  const bookId = props.bookId || location.state?.bookId || id;
+  // const bookId = props.bookId || location.state?.bookId || id;
   console.log('bookId:', bookId); // Debugging line to check the bookId value
   console.log('book:', book); // Debugging line to check the bookId value
+  const addToCart = () => {
+    if (!book) return;
+    
+    // Check if user is logged in
+    if (!isLoggedIn) {
+      setShowLoginPopup(true);
+      return;
+    }
+    
+    // Check if we have the user ID
+    if (!userId) {
+      console.error('User ID not available');
+      return;
+    }
+    
+    // Get existing cart data from localStorage or initialize empty object
+    let cartData = JSON.parse(localStorage.getItem('cart') || '{}');
+    
+    // Initialize user's cart if it doesn't exist
+    if (!cartData[userId]) {
+      cartData[userId] = {};
+    }
+    
+    // Check if this book is already in user's cart
+    if (cartData[userId][bookId]) {
+      // Update quantity if book already in cart
+      if ((cartData[userId][bookId].quantity + quantity) > 8) {
+        alert(`You are not allowed to purchase more than 8 copies of the book`);
+      } else {
+        cartData[userId][bookId].quantity += quantity;
+        alert(`Added ${quantity} copy/copies of "${book.book_title}" to your cart!`);
+      }
+    } else {
+      // Add new item to cart
+      cartData[userId][bookId] = {
+        quantity: quantity,
+        author: book.author.author_name
+      };
+      alert(`Added ${quantity} copy/copies of "${book.book_title}" to your cart!`);
+    }
+    
+    // Save updated cart to localStorage
+    localStorage.setItem('cart', JSON.stringify(cartData));
+  };
   
   useEffect(() => {
     if (bookId) {
@@ -36,8 +222,21 @@ export default function ProductDetail(props) {
     setQuantity(prevQuantity => prevQuantity > 1 ? prevQuantity - 1 : 1);
   };
 
+  // Handle successful login
+  const handleLogin = () => {
+    setIsLoggedIn(true);
+    // Optionally add to cart automatically after login
+    addToCart();
+  };
+
   return (
     <div className="container mx-auto py-8 px-6 md:px-12 lg:px-20 my-12 max-w-6xl mt-20">
+      {/* Login popup */}
+      <LoginPopup 
+        isOpen={showLoginPopup} 
+        onClose={() => setShowLoginPopup(false)} 
+        onLogin={handleLogin}
+      />
       <div className="flex flex-col lg:flex-row gap-6 shadow-lg rounded-lg overflow-hidden">
         {/* Left Column - Book Details */}
         <div className="flex-[3] bg-white p-6 rounded-l-lg"> 
@@ -118,7 +317,7 @@ export default function ProductDetail(props) {
             </div>
             
             {/* Add to Cart Button */}
-            <button className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-md flex items-center justify-center transition-colors duration-300">
+            <button onClick={addToCart} className="mt-6 w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-4 rounded-md flex items-center justify-center transition-colors duration-300">
               <ShoppingCartIcon className="h-5 w-5 mr-2" />
               Add to Cart
             </button>
