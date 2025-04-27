@@ -55,7 +55,7 @@ class Book(Base):
 class Order(Base):
     __tablename__ = "order"
 
-    id = Column(BIGINT, Sequence('order_id_seq'), primary_key=True, index=True)
+    id = Column(BIGINT, primary_key=True, index=True)
     user_id = Column(Integer, ForeignKey("user.id"), nullable=False)
     order_date = Column(TIMESTAMP, nullable=False)
     order_amount = Column(Numeric(8, 2), nullable=False)
@@ -66,7 +66,7 @@ class Order(Base):
 class OrderItem(Base):
     __tablename__ = "order_item"
 
-    id = Column(BIGINT, primary_key=True, index=True)
+    id = Column(BIGINT, Sequence("order_item_id_seq"), primary_key=True, index=True)
     order_id = Column(BIGINT, ForeignKey("order.id"), nullable=False)
     book_id = Column(BIGINT, ForeignKey("book.id"), nullable=False)
     quantity = Column(Integer, nullable=False)
@@ -97,3 +97,4 @@ class Discount(Base):
     discount_price = Column(Numeric(5, 2), nullable=False)
 
     book = relationship("Book", back_populates="discounts")
+
