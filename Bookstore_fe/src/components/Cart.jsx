@@ -16,46 +16,87 @@ export default function ShoppingCart() {
       [bookId]: true
     }));
   };
-  const handleSubmit = async (e) => {
+  const handlePlaceOrder = async (e) => {
     e.preventDefault();
-    const token = Cookies.get('token')
-    if(!token){
+    const token = Cookies.get('token');
+    
+    if (!token) {
       alert('Please login to place an order');
-
+      return;
     }
-  
-     
+    
+    try {
+      if (cartItems.length === 0) {
+        alert('Your cart is empty');
+        return;
+      }
+      
+      
       const totalAmount = parseFloat(getCartTotal());
-      const order = {
-        user_id: userId,
-        order_date: new Date(),
-        order_amount: totalAmount
+      
+      // Create order first to get the order_id
+      const orderResponse = await fetch('http://localhost:8000/api/orders', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          order_amount: totalAmount
+        })
+      });
+      
+      if (!orderResponse.ok) {
+        const errorData = await orderResponse.json().catch(() => ({ detail: 'Could not parse error response' }));
+        console.error('Server error response:', errorData);
+        alert(`Error: ${errorData.detail || 'Unknown server error'}`);
+        return;
       }
-      try{
-          const respose = await fetch('http://localhost:8000/api/orders',{
-            method:'POST',
-            headers:{
-              'Content-Type':'application/json',
-              // 'Authorization':`Bearer ${token}`
-            },
-            body:JSON.stringify(order)
-            
+      
+      const orderData = await orderResponse.json();
+      const orderId = orderData.order_id;
+      
+      // Now create order item using the order_id
+      const orderItemPromises = cartItems.map( item =>
+        fetch('http://localhost:8000/api/order-items', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            order_id: orderId,
+            book_id: item.id,
+            quantity: item.quantity,
+            price: item.price
           })
-          if (response.ok) {
-            setMessage(`Order created with ID: ${data.order_id}`);
-          } else {
-            setMessage(`Error: ${data.detail || 'Unknown error'}`);
-          }
-      }
-      catch{
-        console.error('Error creating order:', error);
-        setMessage('Error creating order.');
-      }
-    
+        })
 
-    
-   
-  }
+      )
+      const orderItemResponse = await Promise.all(orderItemPromises);
+      const failedResponses = orderItemResponse.filter(response => !response.ok);
+
+       
+      
+      if (failedResponses.length > 0) {
+        // Get the first error message
+        const firstErrorResponse = failedResponses[0];
+        const errorData = await firstErrorResponse.json().catch(() => ({ detail: 'Could not parse error response' }));
+        console.error('Server error response for order item:', errorData);
+        alert(`Error adding items to order: ${errorData.detail || 'Unknown server error'}`);
+        return;
+      }
+      
+      alert(`Order created successfully! Order ID: ${orderId}`);
+      
+      // Clear cart after successful order
+      // localStorage.removeItem('cart');
+      // setCartItems([]);
+    } catch (error) {
+      console.error('Error creating order:', error);
+      alert(`Error creating order: ${error.message}`);
+    }
+  };
 
   useEffect(() => {
     // Fetch user ID first
@@ -158,8 +199,8 @@ export default function ShoppingCart() {
 
       const storedCart = JSON.parse(localStorage.getItem('cart') || '{}');
       if (storedCart[userId] && storedCart[userId][id]) {
-        delete storedCart[userId][id];
-        localStorage.setItem('cart', JSON.stringify(storedCart));
+        // delete storedCart[userId][id];
+        // localStorage.setItem('cart', JSON.stringify(storedCart));
       }
       return;
     }
@@ -273,7 +314,7 @@ export default function ShoppingCart() {
           <h3 className="text-center mb-6 font-medium text-lg">Cart Totals</h3>
           <div className="text-center">
             <p className="text-3xl font-bold mb-8">${getCartTotal()}</p>
-            <button className="w-full bg-gray-200 py-3 px-6 rounded hover:bg-gray-300 transition-colors text-base font-medium">
+            <button onClick={handlePlaceOrder} className="w-full bg-gray-200 py-3 px-6 rounded hover:bg-gray-300 transition-colors text-base font-medium">
               Place order
             </button>
           </div>
