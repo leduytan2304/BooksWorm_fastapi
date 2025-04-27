@@ -2,7 +2,7 @@ import { React, useEffect, useState } from "react";
 import { assets } from "../assets/assets";
 import { PlayIcon } from "@heroicons/react/24/solid";
 import axios from "axios";
-
+import Card from "./ShopPage/Card";
 const OnSale = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardsToShow, setCardsToShow] = useState(1);
@@ -114,35 +114,13 @@ const OnSale = () => {
                 }}
               >
                 {books.map((book, index) => (
-                  <div
-                    key={index}
-                    className="flex-shrink-0 px-2"
-                    style={{ width: getCardWidth() }}
-                  >
-                    <div className="relative">
-                      <img
-                        src={book.book_cover_photo}
-                        alt={book.book_title}
-                        className="w-full h-auto object-cover aspect-[3/4] mb-14"
-                        onError={(e) => {
-                          e.target.src = 'https://via.placeholder.com/150x200?text=No+Image';
-                        }}
-                      />
-                      <div className="absolute left-0 right-0 bottom-0 flex justify-center">
-                        <div className="inline-block bg-white w-full px-3 py-2 shadow-md">
-                          <h2 className="text-sm sm:text-base lg:text-lg font-semibold text-gray-800 truncate">
-                            {book.book_title}
-                          </h2>
-                          <p className="text-xs sm:text-sm text-gray-500 truncate">
-                            
-                            <span className="line-through ml-2 text-gray-400">${book.book_price}</span>
-                            <span className="text-xl font-bold text-red-500 ml-2">${book.discounts?.[0]?.discount_price} </span>
-                            <span className="hidden sm:inline"> | {book.author?.author_name}</span>
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
+                   <div
+                   key={index}
+                   className="flex-shrink-0 px-2"
+                   style={{ width: getCardWidth() }}
+                 >
+                   <Card book={book} />
+                 </div>
                 ))}
               </div>
             </div>
