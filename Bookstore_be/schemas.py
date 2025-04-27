@@ -37,45 +37,45 @@ class User(BaseModel):
     first_name: Optional[str]
     last_name: Optional[str]
 
-# Order related schemas
-class OrderItemBase(BaseModel):
-    book_id: int
-    quantity: int
-    price: float
+# # Order related schemas
+# class OrderItemBase(BaseModel):
+#     book_id: int
+#     quantity: int
+#     price: float
 
-class OrderItemCreate(OrderItemBase):
-    pass
+# class OrderItemCreate(OrderItemBase):
+#     pass
 
-class OrderItemUpdate(BaseModel):
-    quantity: int
+# class OrderItemUpdate(BaseModel):
+#     quantity: int
 
-class OrderItem(OrderItemBase):
-    id: int
-    order_id: int
+# class OrderItem(OrderItemBase):
+#     id: int
+#     order_id: int
     
-    class Config:
-        orm_mode = True
+#     class Config:
+#         orm_mode = True
 
-class OrderBase(BaseModel):
-    order_date: Optional[datetime] = None
-    order_amount: Optional[float] = None
-    status: Optional[str] = "CART"
-    shipping_address: Optional[str] = None
-    payment_method: Optional[str] = None
+# class OrderBase(BaseModel):
+#     order_date: Optional[datetime] = None
+#     order_amount: Optional[float] = None
+#     status: Optional[str] = "CART"
+#     shipping_address: Optional[str] = None
+#     payment_method: Optional[str] = None
 
-class OrderCreate(OrderBase):
-    pass
+# class OrderCreate(OrderBase):
+#     pass
 
-class OrderUpdate(BaseModel):
-    status: str
+# class OrderUpdate(BaseModel):
+#     status: str
 
-class Order(OrderBase):
-    id: int
-    user_id: int
-    order_items: List[OrderItem] = []
+# class Order(OrderBase):
+#     id: int
+#     user_id: int
+#     order_items: List[OrderItem] = []
     
-    class Config:
-        orm_mode = True
+#     class Config:
+#         orm_mode = True
 
 class OrderSummary(BaseModel):
     id: int
@@ -86,27 +86,24 @@ class OrderSummary(BaseModel):
     class Config:
         orm_mode = True
 
-class OrderDetail(OrderSummary):
-    shipping_address: Optional[str] = None
-    payment_method: Optional[str] = None
-    order_items: List[OrderItem] = []
+# class OrderDetail(OrderSummary):
+#     shipping_address: Optional[str] = None
+#     payment_method: Optional[str] = None
+#     order_items: List[OrderItem] = []
     
-    class Config:
-        orm_mode = True
+#     class Config:
+#         orm_mode = True
 
-class CartResponse(BaseModel):
-    id: int
-    order_items: List[OrderItem] = []
-    order_amount: float
+# class CartResponse(BaseModel):
+#     id: int
+#     order_items: List[OrderItem] = []
+#     order_amount: float
     
-    class Config:
-        orm_mode = True
+#     class Config:
+#         orm_mode = True
 
-class CheckoutRequest(BaseModel):
-    shipping_address: str
-    payment_method: str
+class OrderItemCreate(BaseModel):
+    user_id:int
+    order_date: date
+    order_amount:float
     
-class CheckoutResponse(BaseModel):
-    order_id: int
-    status: str
-    message: str
