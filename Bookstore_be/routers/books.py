@@ -25,12 +25,13 @@ async def get_books(
         SortOption.discount_desc, 
         description="Sort option for books"
     ),
+    
     star: Optional[float] = Query(None, ge=0, le=5, description="Minimum average rating star"),
+    limit: Optional[int] = Query(None, ge=1, description="Maximum number of records to return"),
     db: Session = Depends(get_db)
 ):
     try:
-       
-         if star is not None:
+        if star is not None:
             sql_query = text("""
                 SELECT 
                     b.id,
@@ -70,8 +71,9 @@ async def get_books(
                     a.author_name
                 HAVING COALESCE(AVG(r.rating_star::FLOAT), 0) >= :star
                 ORDER BY avg_rating asc
+                LIMIT :limit
             """)
-            result = db.execute(sql_query, {"star": star})
+            result = db.execute(sql_query, {"star": star, "limit": limit if limit else 100})
             books = result.fetchall()
             
             if not books:
@@ -80,52 +82,52 @@ async def get_books(
                                   
        
     
-         elif filterBy:
+        elif filterBy:
        
          
             if filterBy == 'discount_desc':
                 sql_query = text("""
                     SELECT 
-        b.id,
-        b.book_title,
-        b.book_summary,
-        b.book_price,
-        b.book_cover_photo,
-        b.category_id,
-        b.author_id,
-        a.author_name,
-        json_agg(
-            json_build_object(
-                'discount_price', d.discount_price,
-                'discount_end_date', d.discount_end_date
-            )
-        ) as discounts,
-        json_build_object(
-            'id', a.id,
-            'author_name', a.author_name
-        ) as author,
-        MIN(d.discount_price) as min_discount_price,  -- for sorting
-        MAX(b.book_price - d.discount_price) as max_discount_amount  -- for sorting
-    FROM book b
-    JOIN discount d ON b.id = d.book_id
-    JOIN author a ON b.author_id = a.id
-    GROUP BY 
-        b.id, 
-        b.book_title,
-        b.book_summary,
-        b.book_price,
-        b.book_cover_photo,
-        b.category_id,
-        b.author_id,
-        a.id,
-        a.author_name
-    ORDER BY 
-        max_discount_amount DESC,
-        min_discount_price ASC;
-
+                        b.id,
+                        b.book_title,
+                        b.book_summary,
+                        b.book_price,
+                        b.book_cover_photo,
+                        b.category_id,
+                        b.author_id,
+                        a.author_name,
+                        json_agg(
+                            json_build_object(
+                                'discount_price', d.discount_price,
+                                'discount_end_date', d.discount_end_date
+                            )
+                        ) as discounts,
+                        json_build_object(
+                            'id', a.id,
+                            'author_name', a.author_name
+                        ) as author,
+                        MIN(d.discount_price) as min_discount_price,
+                        MAX(b.book_price - d.discount_price) as max_discount_amount
+                    FROM book b
+                    JOIN discount d ON b.id = d.book_id
+                    JOIN author a ON b.author_id = a.id
+                    GROUP BY 
+                        b.id, 
+                        b.book_title,
+                        b.book_summary,
+                        b.book_price,
+                        b.book_cover_photo,
+                        b.category_id,
+                        b.author_id,
+                        a.id,
+                        a.author_name
+                    ORDER BY 
+                        max_discount_amount DESC,
+                        min_discount_price ASC
+                    LIMIT :limit
                 """)
                 
-                result = db.execute(sql_query)
+                result = db.execute(sql_query, {"limit": limit if limit else 100})
                 books = result.fetchall()
                 return books
 
@@ -555,38 +557,40 @@ async def get_book(book_id: int, db: Session = Depends(get_db)):
     try:
         sql_query = text("""
 SELECT 
-        b.id,
-        b.book_title,
-        b.book_summary,
-        b.book_price,
-        b.book_cover_photo,
-        b.category_id,
-        b.author_id,
-        a.author_name,
+    b.id,
+    b.book_title,
+    b.book_summary,
+    b.book_price,
+    b.book_cover_photo,
+    b.category_id,
+    b.author_id,
+    a.author_name,
+    COALESCE(
         json_agg(
             json_build_object(
                 'discount_price', d.discount_price,
                 'discount_end_date', d.discount_end_date
             )
-        ) as discounts,
-        json_build_object(
-            'id', a.id,
-            'author_name', a.author_name
-        ) as author
-    FROM book b
-    JOIN discount d ON b.id = d.book_id
-    JOIN author a ON b.author_id = a.id
-    WHERE b.id = :book_id
-    GROUP BY 
-        b.id, 
-        b.book_title,
-        b.book_summary,
-        b.book_price,
-        b.book_cover_photo,
-        b.category_id,
-        b.author_id,
-        a.id,
-        a.author_name
+        ) FILTER (WHERE d.discount_price IS NOT NULL), '[]'
+    ) as discounts,
+    json_build_object(
+        'id', a.id,
+        'author_name', a.author_name
+    ) as author
+FROM book b
+LEFT JOIN discount d ON b.id = d.book_id
+JOIN author a ON b.author_id = a.id
+WHERE b.id = :book_id
+GROUP BY 
+    b.id, 
+    b.book_title,
+    b.book_summary,
+    b.book_price,
+    b.book_cover_photo,
+    b.category_id,
+    b.author_id,
+    a.id,
+    a.author_name
 """)
         result = db.execute(sql_query, {"book_id": book_id})
         book = result.fetchone()

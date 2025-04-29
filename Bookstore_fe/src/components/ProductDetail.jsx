@@ -3,114 +3,117 @@ import { MinusIcon, PlusIcon, ShoppingCartIcon } from '@heroicons/react/24/solid
 import { useParams, useLocation } from 'react-router-dom';
 import axios from 'axios';
 import Cookies from 'js-cookie';
+import ProductReviews from './Review';
+import Notification from './PopUpNotification';
+import LoginPopup from './LoginPopup';
 
 // Add LoginPopup component
-function LoginPopup({ isOpen, onClose, onLogin }) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+// function LoginPopup({ isOpen, onClose, onLogin }) {
+//   const [email, setEmail] = useState('');
+//   const [password, setPassword] = useState('');
+//   const [error, setError] = useState('');
+//   const [isLoading, setIsLoading] = useState(false);
   
-  const handleLogin = async (e) => {
-    e.preventDefault();
-    setIsLoading(true);
-    setError('');
+//   const handleLogin = async (e) => {
+//     e.preventDefault();
+//     setIsLoading(true);
+//     setError('');
     
-    try {
-      const formData = new URLSearchParams();
-      formData.append('username', email); // Backend expects 'username' for email
-      formData.append('password', password);
+//     try {
+//       const formData = new URLSearchParams();
+//       formData.append('username', email); // Backend expects 'username' for email
+//       formData.append('password', password);
       
-      const response = await fetch('http://localhost:8000/api/token', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: formData,
-      });
+//       const response = await fetch('http://localhost:8000/api/token', {
+//         method: 'POST',
+//         headers: {
+//           'Content-Type': 'application/x-www-form-urlencoded',
+//         },
+//         body: formData,
+//       });
       
-      const data = await response.json();
+//       const data = await response.json();
       
-      if (!response.ok) {
-        throw new Error(data.detail || 'Login failed');
-      }
+//       if (!response.ok) {
+//         throw new Error(data.detail || 'Login failed');
+//       }
       
-      // Save token to cookies
-      Cookies.set('token', data.access_token, { 
-        expires: 7, 
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict'
-      });
+//       // Save token to cookies
+//       Cookies.set('token', data.access_token, { 
+//         expires: 7, 
+//         secure: process.env.NODE_ENV === 'production',
+//         sameSite: 'strict'
+//       });
       
-      // Save user email to cookies
-      Cookies.set('userEmail', data.user_email || email, {
-        expires: 7,
-        secure: process.env.NODE_ENV === 'production',
-        sameSite: 'strict'
-      });
+//       // Save user email to cookies
+//       Cookies.set('userEmail', data.user_email || email, {
+//         expires: 7,
+//         secure: process.env.NODE_ENV === 'production',
+//         sameSite: 'strict'
+//       });
       
-      onLogin();
-      onClose();
-    } catch (error) {
-      setError(error.message || 'Invalid email or password');
-      console.error('Login error:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+//       onLogin();
+//       onClose();
+//     } catch (error) {
+//       setError(error.message || 'Invalid email or password');
+//       console.error('Login error:', error);
+//     } finally {
+//       setIsLoading(false);
+//     }
+//   };
   
-  if (!isOpen) return null;
+//   if (!isOpen) return null;
   
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-        <h2 className="text-xl font-bold mb-4">Login Required</h2>
-        <p className="mb-4">Please login to add items to your cart</p>
+//   return (
+//     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+//       <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+//         <h2 className="text-xl font-bold mb-4">Login Required</h2>
+//         <p className="mb-4">Please login to add items to your cart</p>
         
-        {error && <p className="text-red-500 mb-4">{error}</p>}
+//         {error && <p className="text-red-500 mb-4">{error}</p>}
         
-        <form onSubmit={handleLogin}>
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Email</label>
-            <input 
-              type="email" 
-              value={email} 
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded"
-              required
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Password</label>
-            <input 
-              type="password" 
-              value={password} 
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded"
-              required
-            />
-          </div>
-          <div className="flex justify-between">
-            <button 
-              type="button" 
-              onClick={onClose}
-              className="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded"
-            >
-              Cancel
-            </button>
-            <button 
-              type="submit" 
-              disabled={isLoading}
-              className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
-            >
-              {isLoading ? 'Logging in...' : 'Login'}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  );
-}
+//         <form onSubmit={handleLogin}>
+//           <div className="mb-4">
+//             <label className="block text-gray-700 mb-2">Email</label>
+//             <input 
+//               type="email" 
+//               value={email} 
+//               onChange={(e) => setEmail(e.target.value)}
+//               className="w-full p-2 border border-gray-300 rounded"
+//               required
+//             />
+//           </div>
+//           <div className="mb-4">
+//             <label className="block text-gray-700 mb-2">Password</label>
+//             <input 
+//               type="password" 
+//               value={password} 
+//               onChange={(e) => setPassword(e.target.value)}
+//               className="w-full p-2 border border-gray-300 rounded"
+//               required
+//             />
+//           </div>
+//           <div className="flex justify-between">
+//             <button 
+//               type="button" 
+//               onClick={onClose}
+//               className="bg-gray-300 hover:bg-gray-400 text-gray-800 py-2 px-4 rounded"
+//             >
+//               Cancel
+//             </button>
+//             <button 
+//               type="submit" 
+//               disabled={isLoading}
+//               className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded"
+//             >
+//               {isLoading ? 'Logging in...' : 'Login'}
+//             </button>
+//           </div>
+//         </form>
+//       </div>
+//     </div>
+//   );
+// }
 
 export default function ProductDetail(props) {
   const [quantity, setQuantity] = useState(1);
@@ -121,6 +124,30 @@ export default function ProductDetail(props) {
   const [userId, setUserId] = useState(null);
   const { id: bookId } = useParams();
   const location = useLocation();
+  
+  // Add notification state
+  const [notification, setNotification] = useState({
+    message: '',
+    type: 'success',
+    isVisible: false
+  });
+
+  // Show notification helper function
+  const showNotification = (message, type = 'success') => {
+    setNotification({
+      message,
+      type,
+      isVisible: true
+    });
+  };
+
+  // Close notification helper function
+  const closeNotification = () => {
+    setNotification(prev => ({
+      ...prev,
+      isVisible: false
+    }));
+  };
   
   // Check if user is logged in and fetch user ID
   useEffect(() => {
@@ -167,6 +194,7 @@ export default function ProductDetail(props) {
     // Check if we have the user ID
     if (!userId) {
       console.error('User ID not available');
+      showNotification('User ID not available', 'error');
       return;
     }
     
@@ -182,10 +210,10 @@ export default function ProductDetail(props) {
     if (cartData[userId][bookId]) {
       // Update quantity if book already in cart
       if ((cartData[userId][bookId].quantity + quantity) > 8) {
-        alert(`You are not allowed to purchase more than 8 copies of the book`);
+        showNotification('You cannot purchase more than 8 copies of this book', 'warning');
       } else {
         cartData[userId][bookId].quantity += quantity;
-        alert(`Added ${quantity} copy/copies of "${book.book_title}" to your cart!`);
+        showNotification(`Added ${quantity} copy/copies of "${book.book_title}" to your cart!`);
       }
     } else {
       // Add new item to cart
@@ -193,7 +221,7 @@ export default function ProductDetail(props) {
         quantity: quantity,
         author: book.author.author_name
       };
-      alert(`Added ${quantity} copy/copies of "${book.book_title}" to your cart!`);
+      showNotification(`Added ${quantity} copy/copies of "${book.book_title}" to your cart!`);
     }
     
     // Save updated cart to localStorage
@@ -223,19 +251,37 @@ export default function ProductDetail(props) {
   };
 
   // Handle successful login
-  const handleLogin = () => {
-    setIsLoggedIn(true);
+  const handleSuccessfulLogin = async () => {
+    const token = Cookies.get('token')
+    if(token){
+      setIsLoggedIn(true)
+      await fetchUserId(token);
+      addToCart()
+      window.location.reload()
+    }
+    
+    else{
+      setIsLoggedIn(false)
+    }
     // Optionally add to cart automatically after login
-    addToCart();
   };
 
   return (
     <div className="container mx-auto py-8 px-6 md:px-12 lg:px-20 my-12 max-w-6xl mt-20">
+      {/* Notification component */}
+      <Notification 
+        message={notification.message}
+        type={notification.type}
+        isVisible={notification.isVisible}
+        onClose={closeNotification}
+        duration={3000}
+      />
+      
       {/* Login popup */}
       <LoginPopup 
         isOpen={showLoginPopup} 
         onClose={() => setShowLoginPopup(false)} 
-        onLogin={handleLogin}
+        onLogin={handleSuccessfulLogin}
       />
       <div className="flex flex-col lg:flex-row gap-6 shadow-lg rounded-lg overflow-hidden">
         {/* Left Column - Book Details */}
@@ -279,9 +325,17 @@ export default function ProductDetail(props) {
           <div>
             {/* Price Section */}
             <div className="flex items-end gap-3 pb-5 border-b border-gray-200">
-              <h2 className="text-lg text-gray-500 line-through">${book?.book_price}</h2>
-              <h1 className="text-3xl font-bold text-blue-700">${book?.discounts?.[0]?.discount_price}</h1>
-              <span className="text-sm bg-red-100 text-red-700 px-2 py-1 rounded">{ ( (1 - (book?.discounts?.[0]?.discount_price / book?.book_price))   * 100).toFixed(1) }% OFF</span>
+              {book?.discounts?.[0]?.discount_price ? (
+                <>
+                  <h2 className="text-lg text-gray-500 line-through">${book?.book_price}</h2>
+                  <h1 className="text-3xl font-bold text-blue-700">${book?.discounts?.[0]?.discount_price}</h1>
+                  <span className="text-sm bg-red-100 text-red-700 px-2 py-1 rounded">
+                    {((1 - (book?.discounts?.[0]?.discount_price / book?.book_price)) * 100).toFixed(1)}% OFF
+                  </span>
+                </>
+              ) : (
+                <h1 className="text-3xl font-bold text-blue-700">${book?.book_price}</h1>
+              )}
             </div>
             
             {/* Stock Status */}
@@ -313,7 +367,11 @@ export default function ProductDetail(props) {
             
             {/* Total Price Calculation */}
             <div className="mt-4 text-right">
-              <p className="text-sm text-gray-600">Total: <span className="text-lg font-bold text-blue-700">${( book?.discounts?.[0]?.discount_price * quantity).toFixed(2)}</span></p>
+              <p className="text-sm text-gray-600">
+                Total: <span className="text-lg font-bold text-blue-700">
+                  ${((book?.discounts?.[0]?.discount_price || book?.book_price) * quantity).toFixed(2)}
+                </span>
+              </p>
             </div>
             
             {/* Add to Cart Button */}
@@ -330,6 +388,8 @@ export default function ProductDetail(props) {
           </div>
         </div>
       </div>
+      {book && <ProductReviews bookId={bookId} />}
+
     </div>
   );
 }

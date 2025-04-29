@@ -16,6 +16,7 @@ class User(Base):
     admin = Column(Boolean, default=False)
 
     orders = relationship("Order", back_populates="user")
+    reviews = relationship("Review", back_populates="user")
 
 class Category(Base):
     __tablename__ = "category"
@@ -80,12 +81,14 @@ class Review(Base):
 
     id = Column(BIGINT, primary_key=True, index=True)
     book_id = Column(BIGINT, ForeignKey("book.id"), nullable=False)
+    user_id = Column(BIGINT, ForeignKey("user.id"), nullable=True)
     review_title = Column(String(120), nullable=False)
     review_details = Column(Text)
     review_date = Column(TIMESTAMP, nullable=False)
-    rating_start = Column(String(255))  # This seems to be a typo in the schema, might be "rating_star"
+    rating_star = Column(String(255))  # This seems to be a typo in the schema, might be "rating_star"
 
     book = relationship("Book", back_populates="reviews")
+    user = relationship("User", back_populates="reviews")
 
 class Discount(Base):
     __tablename__ = "discount"
@@ -97,4 +100,6 @@ class Discount(Base):
     discount_price = Column(Numeric(5, 2), nullable=False)
 
     book = relationship("Book", back_populates="discounts")
+
+
 

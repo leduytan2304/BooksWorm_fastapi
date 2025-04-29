@@ -44,6 +44,19 @@ class OrderItemCreate(BaseModel):
     book_id: int
     quantity: int
     price: float
+class Reviews(BaseModel):
+    id: int
+    book_id: int
+    user_id: Optional[int] = None
+    review_title: str
+    review_details: Optional[str] = None
+    review_date: datetime
+    rating_star: Optional[int] = None
+    book_title: str
+    book_cover_photo: Optional[str] = None
+    
+    class Config:
+        orm_mode = True
 
 # class OrderItemCreate(OrderItemBase):
 #     pass

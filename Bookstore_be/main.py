@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from routers.config import settings
 from routers import author
 from routers import order
+from routers import reviews
 
 app = FastAPI()
 
@@ -24,3 +25,4 @@ app.include_router(books.router, prefix="/api", tags=["/books"])
 app.include_router(author.router, prefix="/api", tags=["/authors"])
 app.include_router(auth.router, prefix="/api", tags=["/auth"])
 app.include_router(order.router, prefix="/api", tags=["/orders"])
+app.include_router(reviews.router, prefix="/api", tags=["/reviews"])

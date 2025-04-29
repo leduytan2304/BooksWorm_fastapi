@@ -27,7 +27,7 @@ def upgrade() -> None:
     op.alter_column('book', 'book_cover_photo',
                existing_type=sa.VARCHAR(length=200),
                nullable=True)
-    op.add_column('review', sa.Column('rating_start', sa.String(length=255), nullable=True))
+    op.add_column('review', sa.Column('rating_star', sa.String(length=255), nullable=True))
     op.drop_column('review', 'rating_star')
     op.drop_constraint('uq_google_id', 'user', type_='unique')
     op.drop_column('user', 'google_id')
@@ -40,7 +40,7 @@ def downgrade() -> None:
     op.add_column('user', sa.Column('google_id', sa.VARCHAR(length=255), autoincrement=False, nullable=True))
     op.create_unique_constraint('uq_google_id', 'user', ['google_id'])
     op.add_column('review', sa.Column('rating_star', sa.VARCHAR(length=255), autoincrement=False, nullable=True))
-    op.drop_column('review', 'rating_start')
+    op.drop_column('review', 'rating_star')
     op.alter_column('book', 'book_cover_photo',
                existing_type=sa.VARCHAR(length=200),
                nullable=False)

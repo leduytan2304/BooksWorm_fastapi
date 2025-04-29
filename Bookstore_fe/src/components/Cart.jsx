@@ -58,7 +58,7 @@ export default function ShoppingCart() {
       
       // Now create order item using the order_id
       const orderItemPromises = cartItems.map( item =>
-        fetch('http://localhost:8000/api/order-items', {
+        fetch('http://localhost:8000/api/order_items', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -199,8 +199,8 @@ export default function ShoppingCart() {
 
       const storedCart = JSON.parse(localStorage.getItem('cart') || '{}');
       if (storedCart[userId] && storedCart[userId][id]) {
-        // delete storedCart[userId][id];
-        // localStorage.setItem('cart', JSON.stringify(storedCart));
+        delete storedCart[userId][id];
+        localStorage.setItem('cart', JSON.stringify(storedCart));
       }
       return;
     }

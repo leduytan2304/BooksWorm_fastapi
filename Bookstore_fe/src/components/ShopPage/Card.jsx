@@ -63,7 +63,6 @@ export default function Card({ book }) {
     author
   } = book;
   console.log(book);
-  console.log('discount: ', discounts[0].discount_price);
 
   const navigate = useNavigate();
   const handleClick = () =>{
@@ -77,7 +76,7 @@ export default function Card({ book }) {
 
   console.log('discountedPrice: ' + discount_price);
   return (
-    <divo onClick={handleClick} className="flex flex-col h-full rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 bg-white">
+    <div onClick={handleClick} className="flex flex-col h-full rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300 bg-white">
       <div className="relative w-full pb-[75%] overflow-hidden group">
         <img 
           className="absolute top-0 left-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" 
@@ -113,6 +112,6 @@ export default function Card({ book }) {
        
        
       </div>
-    </divo>
+    </div>
   );
 }
