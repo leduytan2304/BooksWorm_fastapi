@@ -170,11 +170,11 @@ async def get_books(
                     a.author_name,
                     COALESCE(AVG(r.rating_star::FLOAT), 0) AS avg_rating,
                     json_agg(
-                        json_build_object(
+                        DISTINCT jsonb_build_object(
                             'discount_price', d.discount_price,
                             'discount_end_date', d.discount_end_date
                         )
-                    ) as discounts,
+                    ) FILTER (WHERE d.discount_price IS NOT NULL) as discounts,
                     json_build_object(
                         'id', a.id,
                         'author_name', a.author_name
@@ -198,7 +198,7 @@ async def get_books(
                 HAVING COALESCE(AVG(r.rating_star::FLOAT), 0) >= :star_value
                 ORDER BY
                     COUNT(r.id) DESC,
-                    (b.book_price - COALESCE(d.discount_price, 0)) ASC
+                    COALESCE(MIN(d.discount_price), b.book_price) ASC
                 OFFSET :offset
                 LIMIT :limit
                 ;""")
