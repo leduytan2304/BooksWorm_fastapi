@@ -345,9 +345,9 @@ function ReviewsSection({ bookId }) {
     className="px-3 py-1 text-sm border border-gray-300 rounded"
   >
     <option value="5">Show 5</option>
-    <option value="10">Show 10</option>
     <option value="15">Show 15</option>
     <option value="20">Show 20</option>
+    <option value="25">Show 25</option>
     
   </select>
             
