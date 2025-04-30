@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Card from "./Card";
 import Pagination from "./Pagination";
+import { ChevronDownIcon, MinusIcon, PlusIcon, ShoppingCartIcon } from '@heroicons/react/24/solid';
 
 function Dropdown({ selectedOption, setSelectedOption, setCurrentPage }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -18,9 +19,10 @@ function Dropdown({ selectedOption, setSelectedOption, setCurrentPage }) {
     <div className="relative inline-block text-left">
       <button
         onClick={toggleDropdown}
-        className="px-4 py-2 bg-blue-500 text-white rounded-lg focus:outline-none"
+        className="px-4 py-2 bg-blue-500 text-white rounded-lg focus:outline-none flex items-center"
       >
-        {selectedOption}
+        <span>{selectedOption}</span>
+        <ChevronDownIcon className="h-5 w-5 ml-2" />
       </button>
       {isOpen && (
         <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-lg z-10">
@@ -71,9 +73,10 @@ function DropdownShowPage({ showPage, setShowPage, setCurrentPage }) {
     <div className="relative inline-block text-left">
       <button
         onClick={toggleDropdown}
-        className="px-4 py-2 bg-blue-500 text-white rounded-lg focus:outline-none"
+        className="px-4 py-2 bg-blue-500 text-white rounded-lg focus:outline-none flex items-center"
       >
-        Show {showPage}
+        <span>Show {showPage}</span>
+        <ChevronDownIcon className="h-5 w-5 ml-2" />
       </button>
       {isOpen && (
         <div className="absolute right-0 mt-2 w-48 bg-white shadow-lg rounded-lg z-10">
@@ -400,6 +403,10 @@ export default function ShopPage() {
     </>
   );
 }
+
+
+
+
 
 
 
