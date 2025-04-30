@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 
 export default function Card({ book }) {
   const {
@@ -11,9 +11,15 @@ export default function Card({ book }) {
     author,
   } = book;
 
+  const [imageError, setImageError] = useState(false);
+
   const handleClick = () => {
     // Open the book details page in a new tab
     window.open(`/product/${id}`, '_blank', 'noopener,noreferrer');
+  };
+
+  const handleImageError = () => {
+    setImageError(true);
   };
 
   const formattedPrice = parseFloat(book_price).toFixed(2);
@@ -29,12 +35,23 @@ export default function Card({ book }) {
       tabIndex={0}
       onKeyDown={(e) => e.key === 'Enter' && handleClick()} // Keyboard accessibility
     >
-      <div className="relative w-full pb-[75%] overflow-hidden group">
-        <img
-          className="absolute top-0 left-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-          src={book_cover_photo}
-          alt={book_title}
-        />
+      <div className="relative w-full pb-[100%] overflow-hidden group">
+        {imageError ? (
+          <div className="flex items-center justify-center w-full h-full absolute top-0 left-0 bg-gray-100">
+            <img 
+              src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/No-Image-Placeholder.svg/1200px-No-Image-Placeholder.svg.png" 
+              alt="No image available" 
+              className="w-full h-full object-contain"
+            />
+          </div>
+        ) : (
+          <img
+            className="absolute top-0 left-0 w-full h-full object-contain bg-gray-50 p-2"
+            src={book_cover_photo}
+            alt={book_title}
+            onError={handleImageError}
+          />
+        )}
         {discount_percentage && (
           <div className="absolute top-0 right-0 bg-red-500 text-white px-3 py-1 rounded-bl-lg font-medium">
             {discount_percentage}% OFF
@@ -62,3 +79,6 @@ export default function Card({ book }) {
     </div>
   );
 }
+
+
+
