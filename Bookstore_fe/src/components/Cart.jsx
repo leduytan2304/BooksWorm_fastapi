@@ -252,13 +252,21 @@ export default function ShoppingCart() {
             </thead>
             <tbody className="divide-y">
               {cartItems.map((item) => (
-                <tr key={item.id} className="text-sm">
+                <tr 
+                  key={item.id} 
+                  className="text-sm cursor-pointer hover:bg-gray-50"
+                  onClick={() => window.open(`/product/${item.id}`, '_blank')}
+                >
                   <td className="p-4">
                     <div className="flex items-center">
                       <div className="w-24 h-28 bg-gray-200 flex-shrink-0 mr-6 flex items-center justify-center">
                         {imageErrors[item.id] ? (
-                          <div className="text-gray-500 text-center text-xs p-2">
-                            No image available
+                          <div className="flex items-center justify-center w-full h-full">
+                            <img 
+                              src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/No-Image-Placeholder.svg/1200px-No-Image-Placeholder.svg.png" 
+                              alt="No image available" 
+                              className="w-full h-full object-contain"
+                            />
                           </div>
                         ) : (
                           <img 
