@@ -25,13 +25,20 @@ async def get_books(
         SortOption.discount_desc, 
         description="Sort option for books"
     ),
-    
+    author_id: Optional[int] = Query(None, description="Filter by author ID"),
     star: Optional[float] = Query(None, ge=0, le=5, description="Minimum average rating star"),
     limit: Optional[int] = Query(None, ge=1, description="Maximum number of records to return"),
+    offset: Optional[int] = Query(0, ge=0, description="Number of books to skip"),
     db: Session = Depends(get_db)
 ):
     try:
-        if star is not None:
+        # Add debug logging
+        print(f"Received parameters: filterBy={filterBy}, author_id={author_id}, star={star}, limit={limit}, offset={offset}")
+        
+        # Convert star to float if it's not None
+        star_value = float(star) if star is not None else 0
+        
+        if filterBy == 'discount_desc':
             sql_query = text("""
                 SELECT 
                     b.id,
@@ -43,22 +50,23 @@ async def get_books(
                     b.author_id,
                     a.author_name,
                     COALESCE(AVG(r.rating_star::FLOAT), 0) AS avg_rating,
-                    COALESCE(
-                        json_agg(
-                            DISTINCT jsonb_build_object(
-                                'discount_price', d.discount_price,
-                                'discount_end_date', d.discount_end_date
-                            )
-                        ) FILTER (WHERE d.discount_price IS NOT NULL), '[]'
-                    ) AS discounts,
+                    json_agg(
+                        json_build_object(
+                            'discount_price', d.discount_price,
+                            'discount_end_date', d.discount_end_date
+                        )
+                    ) as discounts,
                     json_build_object(
                         'id', a.id,
                         'author_name', a.author_name
-                    ) AS author
+                    ) as author,
+                    MIN(d.discount_price) as min_discount_price,
+                    MAX(b.book_price - d.discount_price) as max_discount_amount
                 FROM book b
+                JOIN discount d ON b.id = d.book_id
                 LEFT JOIN review r ON b.id = r.book_id
-                LEFT JOIN discount d ON b.id = d.book_id
                 JOIN author a ON b.author_id = a.id
+                WHERE (:author_id IS NULL OR b.author_id = :author_id)
                 GROUP BY 
                     b.id, 
                     b.book_title,
@@ -69,15 +77,26 @@ async def get_books(
                     b.author_id,
                     a.id,
                     a.author_name
-                HAVING COALESCE(AVG(r.rating_star::FLOAT), 0) >= :star
-                ORDER BY avg_rating asc
-                LIMIT :limit
+                HAVING COALESCE(AVG(r.rating_star::FLOAT), 0) >= :star_value
+                ORDER BY 
+                    max_discount_amount DESC,
+                    min_discount_price ASC
+                OFFSET :offset
+                LIMIT :limit;
             """)
-            result = db.execute(sql_query, {"star": star, "limit": limit if limit else 100})
+            
+            result = db.execute(sql_query, {
+                "author_id": author_id, 
+                "star_value": star_value,
+                "offset": offset, 
+                "limit": limit if limit else 100
+            })
             books = result.fetchall()
             
-            if not books:
-                raise HTTPException(status_code=404, detail="No books found")
+            # Add debug logging
+            print(f"Query returned {len(books)} books")
+            
+            # Convert to list of dictionaries for response
             return [dict(row._mapping) for row in books]
                                   
        
@@ -111,6 +130,7 @@ async def get_books(
                     FROM book b
                     JOIN discount d ON b.id = d.book_id
                     JOIN author a ON b.author_id = a.id
+                    WHERE (:author_id IS NULL OR b.author_id = :author_id)
                     GROUP BY 
                         b.id, 
                         b.book_title,
@@ -124,12 +144,18 @@ async def get_books(
                     ORDER BY 
                         max_discount_amount DESC,
                         min_discount_price ASC
-                    LIMIT :limit
+                    OFFSET :offset
+                    LIMIT :limit;
                 """)
                 
-                result = db.execute(sql_query, {"limit": limit if limit else 100})
+                result = db.execute(sql_query, {"author_id": author_id, "offset": offset, "limit": limit if limit else 100})
                 books = result.fetchall()
-                return books
+                
+                # Add debug logging
+                print(f"Query returned {len(books)} books")
+                
+                # Convert to list of dictionaries for response
+                return [dict(row._mapping) for row in books]
 
             elif filterBy == 'popular_desc':
                 sql_query = text("""
@@ -142,6 +168,7 @@ async def get_books(
                     b.category_id,
                     b.author_id,
                     a.author_name,
+                    COALESCE(AVG(r.rating_star::FLOAT), 0) AS avg_rating,
                     json_agg(
                         json_build_object(
                             'discount_price', d.discount_price,
@@ -157,6 +184,7 @@ async def get_books(
                 LEFT JOIN review r ON b.id = r.book_id
                 LEFT JOIN discount d ON b.id = d.book_id
                 JOIN author a ON b.author_id = a.id
+                WHERE (:author_id IS NULL OR b.author_id = :author_id)
                 GROUP BY
                     b.id,
                     b.book_title,
@@ -166,96 +194,126 @@ async def get_books(
                     b.category_id,
                     b.author_id,
                     a.id,
-                    a.author_name,
-                    d.discount_price
+                    a.author_name
+                HAVING COALESCE(AVG(r.rating_star::FLOAT), 0) >= :star_value
                 ORDER BY
                     COUNT(r.id) DESC,
-                    (b.book_price - COALESCE(d.discount_price, 0)) ASC;"""
-                            )
-                result = db.execute(sql_query)
+                    (b.book_price - COALESCE(d.discount_price, 0)) ASC
+                OFFSET :offset
+                LIMIT :limit
+                ;""")
+                result = db.execute(sql_query, {
+                    "author_id": author_id, 
+                    "star_value": star_value,
+                    "offset": offset, 
+                    "limit": limit if limit else 100
+                })
                 books = result.fetchall()
-                return books
+                return [dict(row._mapping) for row in books]
 
             elif filterBy == 'final_price_asc':
-                    # query = query.join(BookModel.discounts)\
-                    #     .order_by(Discount.discount_price.asc())
-                    sql_query = text("""
-                    SELECT 
-                        b.id,
-                        b.book_title,
-                        b.book_summary,
-                        b.book_price,
-                        b.book_cover_photo,
-                        b.category_id,
-                        b.author_id,
-                        a.author_name,
-                        json_agg(
-                            json_build_object(
-                                'discount_price', d.discount_price,
-                                'discount_end_date', d.discount_end_date
-                            )
-                        ) as discounts,
+                sql_query = text("""
+                SELECT 
+                    b.id,
+                    b.book_title,
+                    b.book_summary,
+                    b.book_price,
+                    b.book_cover_photo,
+                    b.category_id,
+                    b.author_id,
+                    a.author_name,
+                    COALESCE(AVG(r.rating_star::FLOAT), 0) AS avg_rating,
+                    json_agg(
                         json_build_object(
-                            'id', a.id,
-                            'author_name', a.author_name
-                        ) as author
-                    FROM book b
-                    JOIN discount d ON b.id = d.book_id
-                    JOIN author a ON b.author_id = a.id
-                    GROUP BY 
-                        b.id, 
-                        b.book_title,
-                        b.book_summary,
-                        b.book_price,
-                        b.book_cover_photo,
-                        b.category_id,
-                        b.author_id,
-                        a.id,
-                        a.author_name
-                    ORDER BY 
-                        MIN(d.discount_price) ASC;""")
-                    result = db.execute(sql_query)
-                    books = result.fetchall()
-                    return books
+                            'discount_price', d.discount_price,
+                            'discount_end_date', d.discount_end_date
+                        )
+                    ) as discounts,
+                    json_build_object(
+                        'id', a.id,
+                        'author_name', a.author_name
+                    ) as author
+                FROM book b
+                JOIN discount d ON b.id = d.book_id
+                LEFT JOIN review r ON b.id = r.book_id
+                JOIN author a ON b.author_id = a.id
+                WHERE (:author_id IS NULL OR b.author_id = :author_id)
+                GROUP BY 
+                    b.id, 
+                    b.book_title,
+                    b.book_summary,
+                    b.book_price,
+                    b.book_cover_photo,
+                    b.category_id,
+                    b.author_id,
+                    a.id,
+                    a.author_name
+                HAVING COALESCE(AVG(r.rating_star::FLOAT), 0) >= :star_value
+                ORDER BY 
+                    MIN(d.discount_price) ASC
+                OFFSET :offset
+                LIMIT :limit
+                ;""")
+                result = db.execute(sql_query, {
+                    "author_id": author_id, 
+                    "star_value": star_value,
+                    "offset": offset, 
+                    "limit": limit if limit else 100
+                })
+                books = result.fetchall()
+                return [dict(row._mapping) for row in books]
+
             elif filterBy == 'final_price_desc':
-                    sql_query = text("""
-                                SELECT 
-                        b.id,
-                        b.book_title,
-                        b.book_summary,
-                        b.book_price,
-                        b.book_cover_photo,
-                        b.category_id,
-                        b.author_id,
-                        a.author_name,
-                        json_agg(
-                            json_build_object(
-                                'discount_price', d.discount_price,
-                                'discount_end_date', d.discount_end_date
-                            )
-                        ) as discounts,
+                sql_query = text("""
+                SELECT 
+                    b.id,
+                    b.book_title,
+                    b.book_summary,
+                    b.book_price,
+                    b.book_cover_photo,
+                    b.category_id,
+                    b.author_id,
+                    a.author_name,
+                    COALESCE(AVG(r.rating_star::FLOAT), 0) AS avg_rating,
+                    json_agg(
                         json_build_object(
-                            'id', a.id,
-                            'author_name', a.author_name
-                        ) as author
-                    FROM book b
-                    JOIN discount d ON b.id = d.book_id
-                    JOIN author a ON b.author_id = a.id
-                    GROUP BY 
-                        b.id, 
-                        b.book_title,
-                        b.book_summary,
-                        b.book_price,
-                        b.book_cover_photo,
-                        b.category_id,
-                        b.author_id,
-                        a.id,
-                        a.author_name
-                    ORDER BY 
-                        MAX(d.discount_price) DESC;""")
-                    result = db.execute(sql_query)
-                    books = result.fetchall()
-                    return books
+                            'discount_price', d.discount_price,
+                            'discount_end_date', d.discount_end_date
+                        )
+                    ) as discounts,
+                    json_build_object(
+                        'id', a.id,
+                        'author_name', a.author_name
+                    ) as author
+                FROM book b
+                JOIN discount d ON b.id = d.book_id
+                LEFT JOIN review r ON b.id = r.book_id
+                JOIN author a ON b.author_id = a.id
+                WHERE (:author_id IS NULL OR b.author_id = :author_id)
+                GROUP BY 
+                    b.id, 
+                    b.book_title,
+                    b.book_summary,
+                    b.book_price,
+                    b.book_cover_photo,
+                    b.category_id,
+                    b.author_id,
+                    a.id,
+                    a.author_name
+                HAVING COALESCE(AVG(r.rating_star::FLOAT), 0) >= :star_value
+                ORDER BY 
+                    MAX(d.discount_price) DESC
+                OFFSET :offset
+                LIMIT :limit
+                ;""")
+                result = db.execute(sql_query, {
+                    "author_id": author_id, 
+                    "star_value": star_value,
+                    "offset": offset, 
+                    "limit": limit if limit else 100
+                })
+                books = result.fetchall()
+                return [dict(row._mapping) for row in books]
 
     #         elif filterBy == 'recommended':
     #                 sql_query = text("""
