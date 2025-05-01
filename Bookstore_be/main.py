@@ -10,6 +10,7 @@ from routers.config import settings
 from routers import author
 from routers import order
 from routers import reviews
+from routers import category
 
 app = FastAPI()
 
@@ -26,3 +27,5 @@ app.include_router(author.router, prefix="/api", tags=["/authors"])
 app.include_router(auth.router, prefix="/api", tags=["/auth"])
 app.include_router(order.router, prefix="/api", tags=["/orders"])
 app.include_router(reviews.router, prefix="/api", tags=["/reviews"])
+app.include_router(category.router, prefix="/api", tags=["/category"])
+
