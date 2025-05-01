@@ -122,7 +122,10 @@ export default function ShopPage() {
   const [authors, setAuthors] = useState([]);
   const [selectedAuthor, setSelectedAuthor] = useState("");
   const [authorDropdownOpen, setAuthorDropdownOpen] = useState(false);
+  const [categoryDropdownOpen, setCategoryDropdownOpen] = useState(false);
   const [star, setStar] = useState("");
+  const [category, setCategory] = useState([]);
+  const [selectedCategory, setSelectedCategory] = useState("");
   // Fetch authors when component mounts
   useEffect(() => {
     const fetchAuthors = async () => {
@@ -154,6 +157,11 @@ export default function ShopPage() {
           url += `&star=${star}`;
         }
         
+        // Add category filter if selected
+        if (selectedCategory) {
+          e
+        }
+        
         const response = await axios.get(url);
         // Count the total number of books returned
         const count = response.data.length;
@@ -164,7 +172,7 @@ export default function ShopPage() {
     };
 
     fetchTotalBooks();
-  }, [selectedOption, selectedAuthor, star]); // Re-fetch when any filter changes
+  }, [selectedOption, selectedAuthor, star, selectedCategory]); // Re-fetch when any filter changes
 
   // Fetch paginated books
   useEffect(() => {
@@ -186,6 +194,11 @@ export default function ShopPage() {
           url += `&star=${star}`;
         }
         
+        // Add category filter if selected
+        if (selectedCategory) {
+          url += `&category_id=${parseInt(selectedCategory, 10)}`;
+        }
+        
         console.log("Fetching books with URL:", url);
         
         const response = await axios.get(url);
@@ -199,11 +212,24 @@ export default function ShopPage() {
     };
 
     fetchBooks();
-  }, [selectedOption, showPage, currentPage, selectedAuthor,star]);
+  }, [selectedOption, showPage, currentPage, selectedAuthor, star, selectedCategory]);
 
   // Calculate total pages
   const totalPages = Math.ceil(totalBooks / showPage);
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get('http://localhost:8000/api/category');
+        setCategory(response.data);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching category:", err);
+      }
+    };
 
+    fetchCategories();
+  }, []);
   return (
     <>
       <div
@@ -239,20 +265,52 @@ export default function ShopPage() {
           {/* Left Sidebar with Filter Dropdowns */}
           <div className="mr-10 flex-[1] hidden md:block">
             {/* Category Dropdown */}
-            <div className="border border-gray-300 rounded-md p-4 mb-4 w-48">
+            <div className="border border-gray-300 rounded-md p-4 mb-4 w-48 relative">
               <h2 className="text-lg font-bold mb-2">Category</h2>
-              <select
-                className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                onChange={(e) =>
-                  console.log("Category selected:", e.target.value)
-                }
-              >
-                <option value="">All Categories</option>
-                <option value="fiction">Fiction</option>
-                <option value="non-fiction">Non-Fiction</option>
-                <option value="science">Science</option>
-                <option value="history">History</option>
-              </select>
+              <div className="relative">
+                <button 
+                  onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
+                  className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white text-left flex justify-between items-center"
+                >
+                  <span>
+                    {selectedCategory 
+                      ? category.find(c => c.id === parseInt(selectedCategory, 10))?.category_name || 'All Categories' 
+                      : 'All Categories'}
+                  </span>
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                  </svg>
+                </button>
+                
+                {categoryDropdownOpen && (
+                  <div className="absolute left-0 top-full mt-1 w-full bg-white border border-gray-300 rounded shadow-lg z-10 max-h-60 overflow-y-auto">
+                    <div 
+                      className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                      onClick={() => {
+                        setSelectedCategory('');
+                        setCategoryDropdownOpen(false);
+                        setCurrentPage(1);
+                      }}
+                    >
+                      All Categories
+                    </div>
+                    {category.map(cat => (
+                      <div 
+                        key={cat.id} 
+                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                        onClick={() => {
+                          setSelectedCategory(cat.id.toString());
+                          setCategoryDropdownOpen(false);
+                          setCurrentPage(1);
+                          console.log("Category selected:", cat.id, cat.category_name);
+                        }}
+                      >
+                        {cat.category_name}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
                 
             {/* Author Dropdown */}
@@ -403,6 +461,16 @@ export default function ShopPage() {
     </>
   );
 }
+
+
+
+
+
+
+
+
+
+
 
 
 
