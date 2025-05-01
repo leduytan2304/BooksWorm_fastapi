@@ -1,7 +1,7 @@
 from pydantic import BaseModel, EmailStr
 from typing import List, Optional
-from datetime import datetime
 from datetime import datetime, date
+
 class BookBase(BaseModel):
     book_title: Optional[str] = None
     book_summary: Optional[str] = None
@@ -17,14 +17,16 @@ class Discount(BaseModel):
         orm_mode = True
 class Author(BaseModel):
     id: int
-    author_name:str
+    author_name: str
+    
     class Config:
         orm_mode = True
 
 class Book(BookBase):
     id: int
-    discounts: List[Discount] = []  # Use List instead of list for type hinting
-    author: Optional[Author]
+    discounts: Optional[List[Discount]] = []  # Make discounts optional with default empty list
+    author: Optional[Author] = None
+    
     class Config:
         orm_mode = True
 
