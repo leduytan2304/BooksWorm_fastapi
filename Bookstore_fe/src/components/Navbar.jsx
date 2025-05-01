@@ -169,7 +169,7 @@ export default function Navbar() {
               to="/product"
               className="px-4 py-2 rounded-full inline-block"
             >
-              Projects
+              Shop
             </Link>
             <Link
               onClick={() => setShowMobileMenu(false)}

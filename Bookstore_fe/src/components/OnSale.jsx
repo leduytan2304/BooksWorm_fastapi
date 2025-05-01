@@ -3,6 +3,7 @@ import { assets } from "../assets/assets";
 import { PlayIcon } from "@heroicons/react/24/solid";
 import axios from "axios";
 import Card from "./ShopPage/Card";
+import { Link } from "react-router-dom";
 const OnSale = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [cardsToShow, setCardsToShow] = useState(1);
@@ -26,6 +27,9 @@ const OnSale = () => {
 
     fetchDiscountedBooks();
   }, []);
+
+
+
 
   useEffect(() => {
     const updateCardsToShow = () => {
@@ -74,9 +78,9 @@ const OnSale = () => {
         <h1 className="text-2xl sm:text-4xl font-bold-100 mb-2 text-left">
           On Sale
         </h1>
-        <button className="flex items-center gap-1 bg-blue-400 rounded-md p-1 text-white hover:bg-blue-500 transition">
+        <Link to="/product" className="flex items-center gap-1 bg-blue-400 rounded-md p-1 text-white hover:bg-blue-500 transition">
           View All <PlayIcon className="w-5 h-5" />
-        </button>
+        </Link>
       </div>
 
       {/* Display loading state */}
@@ -148,3 +152,4 @@ const OnSale = () => {
 };
 
 export default OnSale;
+
