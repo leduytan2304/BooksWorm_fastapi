@@ -4,29 +4,30 @@ import { StarIcon } from '@heroicons/react/24/solid';
 
 import { StarIcon as StarIconOutline } from '@heroicons/react/24/outline';
 import Cookies from 'js-cookie';
+import LoginPopup from './LoginPopup';
 
 // Review Item Component to display individual reviews
-function ReviewItem({ review }) {
-  return (
-    <div className="border-b border-gray-200 py-4">
-      <div className="flex justify-between mb-2">
-        <h3 className="text-lg font-semibold">{review.review_title}</h3>
-        <div className="flex">
-          {[...Array(5)].map((_, i) => (
-            <StarIcon 
-              key={i} 
-              className={`h-5 w-5 ${i < parseInt(review.rating_star) ? 'text-yellow-400' : 'text-gray-300'}`}
-            />
-          ))}
-        </div>
-      </div>
-      <p className="text-gray-700 mb-2">{review.review_details}</p>
-      <div className="text-sm text-gray-500">
-        {review.user_name || 'Anonymous'} - {new Date(review.review_date).toLocaleDateString()}
-      </div>
-    </div>
-  );
-}
+// function ReviewItem({ review }) {
+//   return (
+//     <div className="border-b border-gray-200 py-4">
+//       <div className="flex justify-between mb-2">
+//         <h3 className="text-lg font-semibold">{review.review_title}</h3>
+//         <div className="flex">
+//           {[...Array(5)].map((_, i) => (
+//             <StarIcon 
+//               key={i} 
+//               className={`h-5 w-5 ${i < parseInt(review.rating_star) ? 'text-yellow-400' : 'text-gray-300'}`}
+//             />
+//           ))}
+//         </div>
+//       </div>
+//       <p className="text-gray-700 mb-2">{review.review_details}</p>
+//       <div className="text-sm text-gray-500">
+//         {review.user_name || 'Anonymous'} - {new Date(review.review_date).toLocaleDateString()}
+//       </div>
+//     </div>
+//   );
+// }
 
 // Review Form Component
 function ReviewForm({ bookId, onReviewSubmitted }) {
@@ -37,7 +38,7 @@ function ReviewForm({ bookId, onReviewSubmitted }) {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
-  
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
   // Check if user is logged in
   useEffect(() => {
     const token = localStorage.getItem('token') || Cookies.get('token');
@@ -45,7 +46,7 @@ function ReviewForm({ bookId, onReviewSubmitted }) {
   }, []);
   
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    // e.preventDefault();
     
     if (!isLoggedIn) {
       setError('Please log in to submit a review');
@@ -56,7 +57,7 @@ function ReviewForm({ bookId, onReviewSubmitted }) {
       setError('Please fill in all fields and select a rating');
       return;
     }
-    
+      
     setError('');
     setIsSubmitting(true);
     
@@ -99,15 +100,20 @@ function ReviewForm({ bookId, onReviewSubmitted }) {
       setIsSubmitting(false);
     }
   };
+
+  const handleSuccessfulLogin = () => {
+    // Force a complete browser refresh
+    window.location.href = window.location.href;
+  };
   
   return (
-    <div className="bg-white p-6 rounded-lg shadow-md">
+    <div className="bg-white p-6  shadow-md border-black border-solid border-2">
       <h2 className="text-xl font-bold mb-4">Write a Review</h2>
       
       {error && <p className="text-red-500 mb-4">{error}</p>}
       
       {!isLoggedIn ? (
-        <p className="text-gray-600 mb-4">Please <a href="/login" className="text-blue-600 hover:underline">log in</a> to write a review.</p>
+        <p className="text-gray-600 mb-4">Please <span onClick={() => setShowLoginPopup(true)} className="text-blue-600 hover:underline cursor-pointer">log in</span> to write a review.</p>
       ) : (
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
@@ -165,6 +171,11 @@ function ReviewForm({ bookId, onReviewSubmitted }) {
           </button>
         </form>
       )}
+       <LoginPopup 
+              isOpen={showLoginPopup} 
+              onClose={() => setShowLoginPopup(false)} 
+              onLogin={handleSuccessfulLogin}
+            />
     </div>
   );
 }
@@ -290,7 +301,7 @@ function ReviewsSection({ bookId }) {
   };
   
   return (
-    <div className="mt-8 bg-white rounded-lg shadow-md">
+    <div className=" bg-white shadow-md  border-black border-solid border-2">
       <div className="p-6 border-b border-gray-200">
         <h2 className="text-xl font-bold">Customer Reviews {totalReviews > 0 && <span className="text-sm font-normal text-gray-500">({totalReviews} in total)</span>}</h2>
         
@@ -424,9 +435,9 @@ function ReviewsSection({ bookId }) {
 // Export the component to be used in the ProductDetail component
 export default function ProductReviews({ bookId }) {
   return (
-    <div className="container mx-auto max-w-6xl">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2">
+    <div className="flex flex-col lg:flex-row gap-16 shadow-lg overflow-hidden">
+      <div className="grid grid-cols-1 md:grid-cols-4 mt-10 gap-8 w-full">
+        <div className="md:col-span-3">
           <ReviewsSection bookId={bookId} />
         </div>
         <div className="md:col-span-1">

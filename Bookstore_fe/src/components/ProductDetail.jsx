@@ -7,8 +7,6 @@ import ProductReviews from './Review';
 import Notification from './PopUpNotification';
 import LoginPopup from './LoginPopup';
 
-
-
 export default function ProductDetail(props) {
   const [quantity, setQuantity] = useState(1);
   const [book, setBook] = useState(null);
@@ -16,6 +14,7 @@ export default function ProductDetail(props) {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const [userId, setUserId] = useState(null);
+  const [imageError, setImageError] = useState(false);
   const { id: bookId } = useParams();
   const location = useLocation();
   
@@ -25,6 +24,11 @@ export default function ProductDetail(props) {
     type: 'success',
     isVisible: false
   });
+
+  // Handle image error
+  const handleImageError = () => {
+    setImageError(true);
+  };
 
   // Show notification helper function
   const showNotification = (message, type = 'success') => {
@@ -177,18 +181,29 @@ export default function ProductDetail(props) {
         onClose={() => setShowLoginPopup(false)} 
         onLogin={handleSuccessfulLogin}
       />
-      <div className="flex flex-col lg:flex-row gap-6 shadow-lg rounded-lg overflow-hidden">
+      <div className="flex flex-col lg:flex-row gap-6 shadow-lg  overflow-hidden">
         {/* Left Column - Book Details */}
-        <div className="flex-[3] bg-white p-6 rounded-l-lg"> 
+        <div className="flex-[3] bg-white p-6  border-solid border-black border-2"> 
           <div className="flex flex-col md:flex-row gap-8">
             {/* Book Image and Author */}
             <div className="md:flex-[1]">
               <div className="mb-4 bg-gray-50 p-2 rounded-md shadow-sm flex items-center justify-center">
-                <img 
-                  className="h-64 object-contain" 
-                  src={book?.book_cover_photo}
-                  alt="Book Cover" 
-                />
+                {imageError ? (
+                  <div className="flex items-center justify-center w-full h-full">
+                    <img 
+                      className="h-64 object-contain"
+                      src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/No-Image-Placeholder.svg/1200px-No-Image-Placeholder.svg.png" 
+                      alt="No image available" 
+                    />
+                  </div>
+                ) : (
+                  <img 
+                    className="h-64 object-contain" 
+                    src={book?.book_cover_photo}
+                    alt={book?.book_title || 'Book Cover'} 
+                    onError={handleImageError}
+                  />
+                )}
               </div>
               <p className="text-gray-600 text-sm font-medium">By (author): <span className="text-blue-700">{book?.author.author_name}</span></p>
             </div>
@@ -205,24 +220,21 @@ export default function ProductDetail(props) {
               <p className="text-gray-700 leading-relaxed mb-4">
                 {book?.book_summary}
               </p>
-              <div className="flex flex-wrap gap-3 mt-4">
-                <span className="px-3 py-1 bg-blue-100 text-blue-800 text-xs font-medium rounded">Fiction</span>
-                <span className="px-3 py-1 bg-purple-100 text-purple-800 text-xs font-medium rounded">Fantasy</span>
-                <span className="px-3 py-1 bg-green-100 text-green-800 text-xs font-medium rounded">Adventure</span>
-              </div>
+              
             </div>
           </div>
         </div>
         
         {/* Right Column - Purchase Box */}
-        <div className="flex-[1] bg-gray-50 p-6 rounded-r-lg border-l border-gray-200">
+        <div className="flex-[1] bg-gray-50 p-6 border-solid border-black border-2">
           <div>
             {/* Price Section */}
             <div className="flex items-end gap-3 pb-5 border-b border-gray-200">
               {book?.discounts?.[0]?.discount_price ? (
                 <>
+                 <h1 className="text-3xl font-bold text-red-700">${book?.discounts?.[0]?.discount_price}</h1>
                   <h2 className="text-lg text-gray-500 line-through">${book?.book_price}</h2>
-                  <h1 className="text-3xl font-bold text-blue-700">${book?.discounts?.[0]?.discount_price}</h1>
+                 
                   <span className="text-sm bg-red-100 text-red-700 px-2 py-1 rounded">
                     {((1 - (book?.discounts?.[0]?.discount_price / book?.book_price)) * 100).toFixed(1)}% OFF
                   </span>
@@ -233,9 +245,7 @@ export default function ProductDetail(props) {
             </div>
             
             {/* Stock Status */}
-            <div className="my-5">
-              <span className="text-sm bg-green-100 text-green-700 px-2 py-1 rounded font-medium">In Stock</span>
-            </div>
+          
             
             {/* Quantity Selector - Now with working buttons */}
             <div className="mt-6">
