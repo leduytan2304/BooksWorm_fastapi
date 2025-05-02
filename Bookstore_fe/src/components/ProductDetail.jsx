@@ -85,19 +85,44 @@ export default function ProductDetail(props) {
     
     // Check if user is logged in
     if (!isLoggedIn) {
-      setShowLoginPopup(true);
+      // Get existing guest cart data from localStorage or initialize empty object
+      let guestCartData = JSON.parse(localStorage.getItem('guestCart') || '{}');
+      
+      console.log("Adding to guest cart:", bookId, book.book_title, quantity);
+      console.log("Current guest cart:", guestCartData);
+      
+      // Check if this book is already in guest cart
+      if (guestCartData[bookId]) {
+        // Update quantity if book already in cart
+        if ((guestCartData[bookId].quantity + quantity) > 8) {
+          showNotification('You cannot purchase more than 8 copies of this book', 'warning');
+        } else {
+          guestCartData[bookId].quantity += quantity;
+          showNotification(`Added ${quantity} copy/copies of "${book.book_title}" to your guest cart!`);
+        }
+      } else {
+        // Add new item to guest cart
+        guestCartData[bookId] = {
+          quantity: quantity,
+          author: book.author.author_name,
+          title: book.book_title,
+          // price: book.discounts?.[0]?.discount_price || book.book_price,
+          image: book.book_cover_photo
+        };
+        showNotification(`Added ${quantity} copy/copies of "${book.book_title}" to your guest cart!`);
+      }
+      
+      // Save updated guest cart to localStorage
+      localStorage.setItem('guestCart', JSON.stringify(guestCartData));
+      console.log("Updated guest cart:", JSON.parse(localStorage.getItem('guestCart')));
       return;
     }
     
-    // Check if we have the user ID
-    if (!userId) {
-      console.error('User ID not available');
-      showNotification('User ID not available', 'error');
-      return;
-    }
-    
+    // For logged-in users, continue with the existing cart logic
     // Get existing cart data from localStorage or initialize empty object
     let cartData = JSON.parse(localStorage.getItem('cart') || '{}');
+
+   
     
     // Initialize user's cart if it doesn't exist
     if (!cartData[userId]) {
@@ -117,7 +142,10 @@ export default function ProductDetail(props) {
       // Add new item to cart
       cartData[userId][bookId] = {
         quantity: quantity,
-        author: book.author.author_name
+        author: book.author.author_name,
+        title: book.book_title,
+        price: book.discounts?.[0]?.discount_price || book.book_price,
+        image: book.book_cover_photo
       };
       showNotification(`Added ${quantity} copy/copies of "${book.book_title}" to your cart!`);
     }
