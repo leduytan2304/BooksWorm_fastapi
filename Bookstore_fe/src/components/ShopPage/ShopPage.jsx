@@ -6,6 +6,14 @@ import { ChevronDownIcon, MinusIcon, PlusIcon, ShoppingCartIcon } from '@heroico
 
 function Dropdown({ selectedOption, setSelectedOption, setCurrentPage }) {
   const [isOpen, setIsOpen] = useState(false);
+  
+  // Map option values to display text
+  const optionLabels = {
+    "discount_desc": "sort by on sale",
+    "popular_desc": "sort by popularity",
+    "final_price_asc": "sort by: low to high",
+    "final_price_desc": "sort by: high to low"
+  };
 
   const toggleDropdown = () => setIsOpen(!isOpen);
 
@@ -21,7 +29,7 @@ function Dropdown({ selectedOption, setSelectedOption, setCurrentPage }) {
         onClick={toggleDropdown}
         className="px-4 py-2 bg-blue-500 text-white rounded-lg focus:outline-none flex items-center"
       >
-        <span>{selectedOption}</span>
+        <span>{optionLabels[selectedOption] || selectedOption}</span>
         <ChevronDownIcon className="h-5 w-5 ml-2" />
       </button>
       {isOpen && (
@@ -31,25 +39,25 @@ function Dropdown({ selectedOption, setSelectedOption, setCurrentPage }) {
               className="px-4 py-2 hover:bg-gray-200 cursor-pointer"
               onClick={() => handleSelect("discount_desc")}
             >
-              discount_desc
+              sort by on sale
             </li>
             <li
               className="px-4 py-2 hover:bg-gray-200 cursor-pointer"
               onClick={() => handleSelect("popular_desc")}
             >
-              popular_desc
+              sort by popularity
             </li>
             <li
               className="px-4 py-2 hover:bg-gray-200 cursor-pointer"
               onClick={() => handleSelect("final_price_asc")}
             >
-              final_price_asc
+              sort by: low to high
             </li>
             <li
               className="px-4 py-2 hover:bg-gray-200 cursor-pointer"
               onClick={() => handleSelect("final_price_desc")}
             >
-              final_price_desc
+              sort by: high to low
             </li>
           </ul>
         </div>
@@ -243,10 +251,14 @@ export default function ShopPage() {
         </div>
 
         {/* Filter Section */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
           <div className="flex flex-row">
-          <p className="text-lg">Filter By</p>
-          <p className="text-lg ml-40">Show  {showPage * (currentPage - 1)} - {currentPage * showPage } of {totalBooks}</p>
+          <p className="text-lg">Filter By: {
+            (selectedAuthor ? authors.find(a => a.id === parseInt(selectedAuthor, 10))?.author_name || '' : 'All Authors') + 
+            (star ? ` / ${star} Star${star === '1' ? '' : 's'} & Up` : ' / All Ratings') + 
+            (selectedCategory ? ` / ${category.find(c => c.id === parseInt(selectedCategory, 10))?.category_name || ''}` : '/ All Categories')
+          }</p>
+          <p className="text-lg ml-40">Show   { Math.max(1,showPage * (currentPage - 1) )} - {Math.min(totalBooks,currentPage * showPage) } of {totalBooks}</p>
           </div>
          
           <div className="flex flex-row gap-10">
@@ -489,6 +501,10 @@ export default function ShopPage() {
     </>
   );
 }
+
+
+
+
 
 
 
