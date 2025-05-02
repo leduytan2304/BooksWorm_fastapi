@@ -214,8 +214,8 @@ export default function ShopPage() {
     fetchBooks();
   }, [selectedOption, showPage, currentPage, selectedAuthor, star, selectedCategory]);
 
-  // Calculate total pages
-  const totalPages = Math.ceil(totalBooks / showPage);
+  // Calculate total pages - ensure we don't show extra pages when records < showPage
+  const totalPages = totalBooks <= 0 ? 1 : Math.ceil(totalBooks / showPage);
   useEffect(() => {
     const fetchCategories = async () => {
       try {
@@ -244,7 +244,11 @@ export default function ShopPage() {
 
         {/* Filter Section */}
         <div className="flex justify-between items-center mb-6">
+          <div className="flex flex-row">
           <p className="text-lg">Filter By</p>
+          <p className="text-lg ml-40">Show  {showPage * (currentPage - 1)} - {currentPage * showPage } of {totalBooks}</p>
+          </div>
+         
           <div className="flex flex-row gap-10">
             <Dropdown
               selectedOption={selectedOption}
@@ -409,7 +413,7 @@ export default function ShopPage() {
             </button>
 
             {(() => {
-              // Don't show pagination if there's only one page
+              // If we only have 1 page worth of results, just show page 1
               if (totalPages <= 1) {
                 return (
                   <button
@@ -419,8 +423,32 @@ export default function ShopPage() {
                   </button>
                 );
               }
+              
+              // If we only have 2 pages, show both pages
+              if (totalPages === 2) {
+                return [
+                  <button
+                    key={1}
+                    onClick={() => setCurrentPage(1)}
+                    className={`px-3 py-1 border-t border-b border-gray-300 text-sm ${
+                      currentPage === 1 ? "bg-gray-200" : "hover:bg-gray-100"
+                    }`}
+                  >
+                    1
+                  </button>,
+                  <button
+                    key={2}
+                    onClick={() => setCurrentPage(2)}
+                    className={`px-3 py-1 border-t border-b border-gray-300 text-sm ${
+                      currentPage === 2 ? "bg-gray-200" : "hover:bg-gray-100"
+                    }`}
+                  >
+                    2
+                  </button>
+                ];
+              }
 
-              // Create a sliding window of pages
+              // For 3+ pages, create a sliding window
               let startPage = Math.max(1, currentPage - 1);
               let endPage = Math.min(startPage + 2, totalPages);
 
@@ -450,7 +478,7 @@ export default function ShopPage() {
               onClick={() =>
                 setCurrentPage((prev) => Math.min(prev + 1, totalPages))
               }
-              disabled={currentPage === totalPages || totalPages === 0}
+              disabled={currentPage === totalPages}
               className="px-3 py-1 border border-gray-300 rounded-r text-sm hover:bg-gray-100 disabled:opacity-50"
             >
               Next
@@ -461,6 +489,9 @@ export default function ShopPage() {
     </>
   );
 }
+
+
+
 
 
 
