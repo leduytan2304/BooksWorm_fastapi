@@ -38,11 +38,11 @@ export default function App() {
         <Routes>
           <Route path="/" element={
             <>
-              <Header/>
-              <About/>
+              {/* <Header/> */}
+              {/* <About/> */}
               <OnSale/>
               <Feature/>
-              <ShopPage/>
+              {/* <ShopPage/> */}
             </>
           } />
           <Route path="/about" element={<About />} />
