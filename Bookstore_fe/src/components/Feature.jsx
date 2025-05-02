@@ -4,7 +4,7 @@ import Card from "./ShopPage/Card";
 const Feature = () => {
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("popular");
+  const [activeTab, setActiveTab] = useState("recommended");
   const [error, setError] = useState(null);
 
   useEffect(() => {
