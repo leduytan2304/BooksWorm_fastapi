@@ -3,7 +3,7 @@ import React from 'react';
 
 const About = () => {
   return (
-    <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8 ">
+    <div className="min-h-screen bg-gray-100 py-12 px-4 sm:px-6 lg:px-8 mt-20 ">
       <div className="max-w-7xl w-full mx-auto space-y-8">
         {/* Header Section */}
         <div className="border-b-2 border-gray-300 pb-4">
