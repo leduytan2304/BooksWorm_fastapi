@@ -185,11 +185,12 @@ function ReviewsSection({ bookId }) {
   const [reviews, setReviews] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [sortOption, setSortOption] = useState('newest');
+  const [sortOption, setSortOption] = useState('newest_to_oldest');
   const [reviewsPerPage, setReviewsPerPage] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalReviews, setTotalReviews] = useState(0);
   const [averageRating, setAverageRating] = useState(0);
+  const [starFilter, setStarFilter] = useState(null);
   
   // Add these functions to your ReviewsSection component
   const getStarCount = (stars) => {
@@ -197,9 +198,7 @@ function ReviewsSection({ bookId }) {
   };
 
   const filterByStars = (stars) => {
-    // You'll need to modify your fetchReviews function to handle star filtering
-    // For now, this just sets a filter and resets pagination
-    setStarFilter(stars);
+    setStarFilter(stars === starFilter ? null : stars);
     setCurrentPage(1);
   };
   
@@ -210,43 +209,28 @@ function ReviewsSection({ bookId }) {
       // Calculate offset based on current page and reviews per page
       const offset = (currentPage - 1) * reviewsPerPage;
       
-      // Map frontend sort options to backend sort options
-      const sortMapping = {
-        'newest': 'newest_to_oldest',
-        'oldest': 'oldest_to_newest',
-      };
+      // Build the API URL with query parameters
+      let url = `http://localhost:8000/api/reviews/${bookId}?sort_by=${sortOption}&limit=${reviewsPerPage}&offset=${offset}`;
       
-      const response = await fetch(
-        `http://localhost:8000/api/reviews/${bookId}?sort_by=${sortMapping[sortOption]}&limit=${reviewsPerPage}&offset=${offset}`
-      );
+      // Add star filter if selected
+      if (starFilter) {
+        url += `&rating_star=${starFilter}`;
+      }
       
-      // Get all reviews to calculate total count
-      const totalReviewResponse = await fetch(
-        `http://localhost:8000/api/reviews/${bookId}?sort_by=${sortMapping[sortOption]}`
-      );
+      console.log('Fetching reviews with URL:', url);
       
-      const allReviews = await totalReviewResponse.json();
-      const reviewCount = allReviews.length;
-      
-      // Update total reviews count
-      setTotalReviews(reviewCount);
-      console.log('Setting total reviews to:', reviewCount);
+      const response = await fetch(url);
       
       if (!response.ok) {
         throw new Error('Failed to fetch reviews');
       }
       
       const data = await response.json();
-      setReviews(data || []);
       
-      // Calculate average rating
-      if (allReviews && allReviews.length > 0) {
-        const sum = allReviews.reduce((acc, review) => acc + parseInt(review.rating_star), 0);
-        setAverageRating(sum / allReviews.length);
-        console.log('Average rating:', sum / allReviews.length);
-      } else {
-        setAverageRating(0);
-      }
+      // Update state with the response data
+      setReviews(data.reviews || []);
+      setTotalReviews(data.total_count);
+      setAverageRating(data.average_rating);
       
     } catch (error) {
       setError('Error loading reviews');
@@ -256,17 +240,12 @@ function ReviewsSection({ bookId }) {
     }
   };
   
-  // Add this useEffect to log when totalReviews changes
-  useEffect(() => {
-    console.log('TotalReviews updated:', totalReviews);
-  }, [totalReviews]);
-  
   // Fetch reviews when component mounts or when dependencies change
   useEffect(() => {
     if (bookId) {
       fetchReviews();
     }
-  }, [bookId, currentPage, sortOption, reviewsPerPage]);
+  }, [bookId, currentPage, sortOption, reviewsPerPage, starFilter]);
   
   // Handle sort change
   const handleSortChange = (event) => {
@@ -303,31 +282,44 @@ function ReviewsSection({ bookId }) {
   return (
     <div className=" bg-white shadow-md  border-black border-solid border-2">
       <div className="p-6 border-b border-gray-200">
-        <h2 className="text-xl font-bold">Customer Reviews {totalReviews > 0 && <span className="text-sm font-normal text-gray-500">({totalReviews} in total)</span>}</h2>
+        <h2 className="text-xl font-bold">Customer Reviews {totalReviews > 0 && <span className="text-sm font-normal text-gray-500">
+          (Filter By {starFilter ? ` ${starFilter} stars` : sortOption === 'newest_to_oldest' ? 'newest to oldest' : 'oldest to newest'})
+        </span>}</h2>
         
         {/* Rating Summary */}
         <div className="mt-4">
           <div className="flex items-center">
             <div className="text-3xl font-bold mr-2">{averageRating.toFixed(1)}</div>
             <div>
-              <div className="flex">
+              {/* <div className="flex">
                 <StarRating rating={Math.round(averageRating)} />
-              </div>
+              </div> */}
+              <p className='text-lg text-black'>Star</p> 
               <div className="text-sm text-gray-500">({totalReviews} {totalReviews === 1 ? 'review' : 'reviews'})</div>
             </div>
-          </div>
+          </div> 
           
           {/* Star Distribution */}
           <div className="flex flex-wrap gap-2 mt-3">
             {[5, 4, 3, 2, 1].map(stars => (
               <button 
                 key={stars}
-                className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100"
+                className={`px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 ${
+                  starFilter === stars ? 'bg-blue-100 border-blue-300' : ''
+                }`}
                 onClick={() => filterByStars(stars)}
               >
                 {stars} star ({getStarCount(stars)})
               </button>
             ))}
+            {starFilter && (
+              <button 
+                className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 text-red-500"
+                onClick={() => setStarFilter(null)}
+              >
+                Clear filter
+              </button>
+            )}
           </div>
           
           {/* Showing X-Y of Z reviews */}
@@ -337,31 +329,25 @@ function ReviewsSection({ bookId }) {
           
           {/* Sort options */}
           <div className="flex flex-wrap gap-2 mt-2">
-        
-
+            <select
+              value={sortOption}
+              onChange={handleSortChange}
+              className="px-3 py-1 text-sm border border-gray-300 rounded"
+            >
+              <option value="newest_to_oldest">Sort by date: newest to oldest</option>
+              <option value="oldest_to_newest">Sort by date: oldest to newest</option>
+            </select>
 
             <select
-    value={sortOption}
-    onChange={handleSortChange}
-    className="px-3 py-1 text-sm border border-gray-300 rounded"
-  >
-    <option value="newest">Sort by date: newest to oldest</option>
-    <option value="oldest">Sort by star: oldest to newest</option>
-    sort by date
-  </select>
-
-  <select
-    value={reviewsPerPage}
-    onChange={handleReviewsPerPageChange}
-    className="px-3 py-1 text-sm border border-gray-300 rounded"
-  >
-    <option value="5">Show 5</option>
-    <option value="15">Show 15</option>
-    <option value="20">Show 20</option>
-    <option value="25">Show 25</option>
-    
-  </select>
-            
+              value={reviewsPerPage}
+              onChange={handleReviewsPerPageChange}
+              className="px-3 py-1 text-sm border border-gray-300 rounded"
+            >
+              <option value="5">Show 5</option>
+              <option value="15">Show 15</option>
+              <option value="20">Show 20</option>
+              <option value="25">Show 25</option>
+            </select>
           </div>
         </div>
       </div>
@@ -380,7 +366,7 @@ function ReviewsSection({ bookId }) {
               <h3 className="text-lg font-semibold">{review.review_title} <span className="text-sm font-normal">({review.rating_star} stars)</span></h3>
               <p className="text-gray-700 my-2">{review.review_details}</p>
               <div className="text-sm text-gray-500">
-                {review.user_name || 'Anonymous'} - {new Date(review.review_date).toLocaleDateString()}
+               {new Date(review.review_date).toLocaleDateString()}
               </div>
             </div>
           ))
