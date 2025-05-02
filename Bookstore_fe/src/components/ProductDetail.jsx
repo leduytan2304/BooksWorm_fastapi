@@ -209,13 +209,13 @@ export default function ProductDetail(props) {
         onClose={() => setShowLoginPopup(false)} 
         onLogin={handleSuccessfulLogin}
       />
-      <div className="flex flex-col lg:flex-row gap-6 shadow-lg  overflow-hidden">
+      <div className="flex flex-col lg:flex-row gap-6 overflow-hidden">
         {/* Left Column - Book Details */}
-        <div className="flex-[3] bg-white p-6  border-solid border-black border-2"> 
+        <div className="flex-[3] bg-white p-6  border-solid border-gray-400 rounded-lg border-2"> 
           <div className="flex flex-col md:flex-row gap-8">
             {/* Book Image and Author */}
             <div className="md:flex-[1]">
-              <div className="mb-4 bg-gray-50 p-2 rounded-md shadow-sm flex items-center justify-center">
+              <div className="mb-4 bg-gray-50 p-2 rounded-md flex items-center justify-center">
                 {imageError ? (
                   <div className="flex items-center justify-center w-full h-full">
                     <img 
@@ -254,7 +254,7 @@ export default function ProductDetail(props) {
         </div>
         
         {/* Right Column - Purchase Box */}
-        <div className="flex-[1] bg-gray-50 p-6 border-solid border-black border-2">
+        <div className="flex-[1] bg-gray-50 p-6 border-solid border-gray-400 rounded-lg border-2">
           <div>
             {/* Price Section */}
             <div className="flex items-end gap-3 pb-5 border-b border-gray-200">
