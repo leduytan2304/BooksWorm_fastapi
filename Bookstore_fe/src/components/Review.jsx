@@ -33,7 +33,7 @@ import LoginPopup from './LoginPopup';
 function ReviewForm({ bookId, onReviewSubmitted }) {
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
-  const [rating, setRating] = useState(0);
+  const [rating, setRating] = useState(1);
   const [hoveredRating, setHoveredRating] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState('');
@@ -107,7 +107,7 @@ function ReviewForm({ bookId, onReviewSubmitted }) {
   };
   
   return (
-    <div className="bg-white p-6  shadow-md border-black border-solid border-2">
+    <div className="">
       <h2 className="text-xl font-bold mb-4">Write a Review</h2>
       
       {error && <p className="text-red-500 mb-4">{error}</p>}
@@ -123,32 +123,12 @@ function ReviewForm({ bookId, onReviewSubmitted }) {
               value={title} 
               onChange={(e) => setTitle(e.target.value)}
               className="w-full p-2 border border-gray-300 rounded"
-              placeholder="What's most important to know?"
+              placeholder=""
               required
             />
           </div>
           
-          <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Select a rating star</label>
-            <div className="flex">
-              {[1, 2, 3, 4, 5].map((star) => (
-                <button
-                  key={star}
-                  type="button"
-                  onClick={() => setRating(star)}
-                  onMouseEnter={() => setHoveredRating(star)}
-                  onMouseLeave={() => setHoveredRating(0)}
-                  className="focus:outline-none"
-                >
-                  {(hoveredRating || rating) >= star ? (
-                    <StarIcon className="h-6 w-6 text-yellow-400" />
-                  ) : (
-                    <StarIconOutline className="h-6 w-6 text-gray-400" />
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
+         
           
           <div className="mb-4">
             <label className="block text-gray-700 mb-2">Details please! Your review helps other shoppers.</label>
@@ -160,6 +140,31 @@ function ReviewForm({ bookId, onReviewSubmitted }) {
               placeholder="What did you like or dislike? What did you use this product for?"
               required
             ></textarea>
+          </div>
+          <div className="mb-4">
+            <label className="block text-gray-700 mb-2">Select a rating star</label>
+            <div className="relative">
+              <select
+                value={rating}
+                onChange={(e) => setRating(parseInt(e.target.value))}
+                className="w-full p-2 border border-gray-300 rounded appearance-none bg-white pr-8 focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="0" disabled>Select a rating</option>
+                <option value="5">5 stars</option>
+                <option value="4">4 stars</option>
+                <option value="3">3 stars </option>
+                <option value="2">2 stars</option>
+                <option value="1">1 star</option>
+              </select>
+              <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                  <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                </svg>
+              </div>
+            </div>
+            
+            {/* Display selected rating as stars */}
+         
           </div>
           
           <button 
@@ -280,7 +285,7 @@ function ReviewsSection({ bookId }) {
   };
   
   return (
-    <div className=" bg-white shadow-md  border-black border-solid border-2">
+    <div className=" ">
       <div className="p-6 border-b border-gray-200">
         <h2 className="text-xl font-bold">Customer Reviews {totalReviews > 0 && <span className="text-sm font-normal text-gray-500">
           (Filter By {starFilter ? ` ${starFilter} stars` : sortOption === 'newest_to_oldest' ? 'newest to oldest' : 'oldest to newest'})
@@ -301,16 +306,15 @@ function ReviewsSection({ bookId }) {
           
           {/* Star Distribution */}
           <div className="flex flex-wrap gap-2 mt-3">
+            <div>({totalReviews})</div>
             {[5, 4, 3, 2, 1].map(stars => (
-              <button 
+              <div 
                 key={stars}
-                className={`px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 ${
-                  starFilter === stars ? 'bg-blue-100 border-blue-300' : ''
-                }`}
-                onClick={() => filterByStars(stars)}
+              
+                // onClick={() => filterByStars(stars)}
               >
-                {stars} star ({getStarCount(stars)})
-              </button>
+               | {stars} star ({getStarCount(stars)})
+              </div>
             ))}
             {starFilter && (
               <button 
@@ -421,15 +425,14 @@ function ReviewsSection({ bookId }) {
 // Export the component to be used in the ProductDetail component
 export default function ProductReviews({ bookId }) {
   return (
-    <div className="flex flex-col lg:flex-row gap-16 shadow-lg overflow-hidden">
-      <div className="grid grid-cols-1 md:grid-cols-4 mt-10 gap-8 w-full">
-        <div className="md:col-span-3">
+    <div className="flex flex-col lg:flex-row gap-6 mt-10  overflow-hidden">
+      
+        <div className="flex-[3] bg-white p-6  border-solid border-gray-400 rounded-lg border-2">
           <ReviewsSection bookId={bookId} />
         </div>
-        <div className="md:col-span-1">
+        <div className="flex-[1] bg-gray-50 p-6 border-solid border-gray-400 rounded-lg border-2">
           <ReviewForm bookId={bookId} onReviewSubmitted={() => {}} />
         </div>
       </div>
-    </div>
   );
 }
