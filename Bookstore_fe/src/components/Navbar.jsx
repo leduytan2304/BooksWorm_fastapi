@@ -87,6 +87,62 @@ export default function Navbar() {
   // Get username from email (everything before @)
   const username = userEmail ? userEmail.split('@')[0] : '';
 
+  // Add this function to calculate cart items count
+  const calculateCartItemCount = () => {
+    try {
+      if (isLoggedIn) {
+        // For logged-in users
+        const storedCart = JSON.parse(localStorage.getItem('cart') || '{}');
+        const userId = Cookies.get('userId');
+        
+        if (!userId || !storedCart[userId]) return 0;
+        
+        // Count total quantity of all items in user's cart
+        return Object.values(storedCart[userId]).reduce((total, item) => {
+          return total + item.quantity;
+        }, 0);
+      } else {
+        // For guest users
+        const guestCart = JSON.parse(localStorage.getItem('guestCart') || '{}');
+        
+        // Count total quantity of all items in guest cart
+        return Object.values(guestCart).reduce((total, item) => {
+          return total + item.quantity;
+        }, 0);
+      }
+    } catch (error) {
+      console.error('Error calculating cart items:', error);
+      return 0;
+    }
+  };
+
+  // Add this effect to update cart count when localStorage changes
+  useEffect(() => {
+    // Initial calculation
+    setCartItemCount(calculateCartItemCount());
+    
+    // Set up event listener for storage changes
+    const handleStorageChange = () => {
+      setCartItemCount(calculateCartItemCount());
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Custom event for cart updates that happen in the same window
+    window.addEventListener('cartUpdated', handleStorageChange);
+    
+    // Check cart count every second (for changes that might not trigger storage event)
+    const intervalId = setInterval(() => {
+      setCartItemCount(calculateCartItemCount());
+    }, 1000);
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange);
+      window.removeEventListener('cartUpdated', handleStorageChange);
+      clearInterval(intervalId);
+    };
+  }, [isLoggedIn]);
+
   return (
     <>
       <div className="fixed top-0 left-0 w-full z-50 bg-gray-800">
@@ -103,9 +159,13 @@ export default function Navbar() {
             <Link to="/product" className="cursor-pointer hover:text-gray-400">
               Shop
             </Link>
-            <Link to="/cart" className="cursor-pointer hover:text-gray-400">
+            <li className="relative">
+            <Link className=" cursor-pointer hover:text-gray-400" to="/cart" >
               Cart
+              <span className="absolute -top-1 -right-3 bg-red-500 text-white text-xs rounded-full px-1" >0</span>
             </Link>
+            </li>
+            
             
             {isLoggedIn ? (
               <>
@@ -173,10 +233,15 @@ export default function Navbar() {
             </Link>
             <Link
               onClick={() => setShowMobileMenu(false)}
-              to="/product"
-              className="px-4 py-2 rounded-full inline-block"
+              to="/cart"
+              className="px-4 py-2 rounded-full inline-block relative"
             >
               Cart
+              {cartItemCount > 0 && (
+                <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {cartItemCount}
+                </span>
+              )}
             </Link>
             
             {isLoggedIn ? (
@@ -216,6 +281,7 @@ export default function Navbar() {
     </>
   );
 }
+
 
 
 
