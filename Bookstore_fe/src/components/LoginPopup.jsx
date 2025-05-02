@@ -45,8 +45,56 @@ export default  function LoginPopup({ isOpen, onClose, onLogin }) {
         sameSite: 'strict'
       });
       
+      // Fetch user data to get user ID
+      const userResponse = await fetch('http://localhost:8000/api/users/me', {
+        headers: {
+          'Authorization': `Bearer ${data.access_token}`
+        }
+      });
+      
+      if (userResponse.ok) {
+        const userData = await userResponse.json();
+        const userId = userData.id;
+        
+        // Merge guest cart with user cart
+        const guestCartData = JSON.parse(localStorage.getItem('guestCart') || '{}');
+        if (Object.keys(guestCartData).length > 0) {
+          // Get existing user cart
+          let cartData = JSON.parse(localStorage.getItem('cart') || '{}');
+          
+          // Initialize user's cart if it doesn't exist
+          if (!cartData[userId]) {
+            cartData[userId] = {};
+          }
+          
+          // Merge guest cart items into user cart
+          for (const [bookId, item] of Object.entries(guestCartData)) {
+            if (cartData[userId][bookId]) {
+              // If book already in user cart, add quantities (up to max 8)
+              const newQuantity = Math.min(cartData[userId][bookId].quantity + item.quantity, 8);
+              cartData[userId][bookId].quantity = newQuantity;
+            } else {
+              // Otherwise add the item to user cart
+              cartData[userId][bookId] = item;
+            }
+          }
+          
+          // Save updated cart to localStorage
+          localStorage.setItem('cart', JSON.stringify(cartData));
+          
+          // Clear guest cart
+          localStorage.removeItem('guestCart');
+        }
+      }
+      
+      // Call onLogin callback
       onLogin();
+      
+      // Close the popup
       onClose();
+      
+      // Reload the page
+      window.location.reload();
     } catch (error) {
       setError(error.message || 'Invalid email or password');
       console.error('Login error:', error);

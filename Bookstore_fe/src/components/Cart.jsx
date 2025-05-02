@@ -1,6 +1,7 @@
-import { use, useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import axios from 'axios';
 import Cookies from 'js-cookie';
+import LoginPopup from './LoginPopup';
 
 export default function ShoppingCart() {
   const [cartItems, setCartItems] = useState([]);
@@ -8,6 +9,7 @@ export default function ShoppingCart() {
   const [userId, setUserId] = useState(null);
   const [bookDetails, setBookDetails] = useState({});
   const [imageErrors, setImageErrors] = useState({});
+  const [showLoginPopup, setShowLoginPopup] = useState(false);
 
   // Handle image loading errors
   const handleImageError = (bookId) => {
@@ -21,7 +23,8 @@ export default function ShoppingCart() {
     const token = Cookies.get('token');
     
     if (!token) {
-      alert('Please login to place an order');
+      console.log("User not logged in, showing login popup");
+      setShowLoginPopup(true);
       return;
     }
     
@@ -30,7 +33,6 @@ export default function ShoppingCart() {
         alert('Your cart is empty');
         return;
       }
-      
       
       const totalAmount = parseFloat(getCartTotal());
       
@@ -57,8 +59,8 @@ export default function ShoppingCart() {
       const orderId = orderData.order_id;
       
       // Now create order item using the order_id
-      const orderItemPromises = cartItems.map( item =>
-        fetch('http://localhost:8000/api/order_items', {
+      const orderItemPromises = cartItems.map(item =>
+        fetch('http://localhost:8000/api/order-items', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -71,13 +73,11 @@ export default function ShoppingCart() {
             price: item.price
           })
         })
-
-      )
+      );
+      
       const orderItemResponse = await Promise.all(orderItemPromises);
       const failedResponses = orderItemResponse.filter(response => !response.ok);
 
-       
-      
       if (failedResponses.length > 0) {
         // Get the first error message
         const firstErrorResponse = failedResponses[0];
@@ -90,11 +90,85 @@ export default function ShoppingCart() {
       alert(`Order created successfully! Order ID: ${orderId}`);
       
       // Clear cart after successful order
-      // localStorage.removeItem('cart');
-      // setCartItems([]);
+      if (userId) {
+        // Get current cart data
+        const storedCart = JSON.parse(localStorage.getItem('cart') || '{}');
+        
+        // Remove this user's cart items
+        if (storedCart[userId]) {
+          delete storedCart[userId];
+          localStorage.setItem('cart', JSON.stringify(storedCart));
+        }
+        
+        // Refresh the page to show empty cart
+        window.location.reload();
+      }
     } catch (error) {
       console.error('Error creating order:', error);
       alert(`Error creating order: ${error.message}`);
+    }
+  };
+
+  // Handle successful login
+  const handleSuccessfulLogin = async () => {
+    const token = Cookies.get('token');
+    if (token) {
+      try {
+        // Fetch user data
+        const response = await fetch('http://127.0.0.1:8000/api/users/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch user data');
+        }
+        
+        const userData = await response.json();
+        setUserId(userData.id);
+        
+        // Merge guest cart with user cart
+        const guestCartData = JSON.parse(localStorage.getItem('guestCart') || '{}');
+        if (Object.keys(guestCartData).length > 0) {
+          // Get existing user cart
+          let cartData = JSON.parse(localStorage.getItem('cart') || '{}');
+          
+          // Initialize user's cart if it doesn't exist
+          if (!cartData[userData.id]) {
+            cartData[userData.id] = {};
+          }
+          
+          // Merge guest cart items into user cart
+          for (const [bookId, item] of Object.entries(guestCartData)) {
+            if (cartData[userData.id][bookId]) {
+              // If book already in user cart, add quantities (up to max 8)
+              const newQuantity = Math.min(cartData[userData.id][bookId].quantity + item.quantity, 8);
+              cartData[userData.id][bookId].quantity = newQuantity;
+            } else {
+              // Otherwise add the item to user cart
+              cartData[userData.id][bookId] = item;
+            }
+          }
+          
+          // Save updated cart to localStorage
+          localStorage.setItem('cart', JSON.stringify(cartData));
+          
+          // Clear guest cart
+          localStorage.removeItem('guestCart');
+        }
+        
+        // Reload cart data
+        loadCartData(userData.id);
+        
+        // Close login popup
+        setShowLoginPopup(false);
+        
+        // Try placing the order again
+        handlePlaceOrder({ preventDefault: () => {} });
+      } catch (error) {
+        console.error('Error updating user data after login:', error);
+      }
     }
   };
 
@@ -103,6 +177,9 @@ export default function ShoppingCart() {
     const fetchUserData = async () => {
       const token = Cookies.get('token');
       if (!token) {
+        console.log("No token found, loading guest cart");
+        // Load guest cart if user is not logged in
+        loadGuestCartData();
         setLoading(false);
         return;
       }
@@ -125,6 +202,8 @@ export default function ShoppingCart() {
         loadCartData(userData.id);
       } catch (error) {
         console.error('Error fetching user data:', error);
+        // Load guest cart if there's an error
+        loadGuestCartData();
         setLoading(false);
       }
     };
@@ -191,31 +270,118 @@ export default function ShoppingCart() {
     }
   };
 
-  const updateQuantity = (id, newQuantity) => {
-    if (newQuantity > 8) return;
-    if (newQuantity <= 0)
-    {
-      setCartItems(cartItems.filter(item => item.id != id))
+  const loadGuestCartData = async () => {
+    try {
+      const storedGuestCart = localStorage.getItem('guestCart');
+      console.log("Loading guest cart from localStorage:", storedGuestCart);
+      
+      if (storedGuestCart) {
+        const parsedGuestCart = JSON.parse(storedGuestCart);
+        console.log("Parsed guest cart:", parsedGuestCart);
+        
+        // Fetch book details for each book in cart
+        const bookIds = Object.keys(parsedGuestCart);
+        const bookDetailsMap = {};
+        
+        if (bookIds.length === 0) {
+          setCartItems([]);
+          setLoading(false);
+          return;
+        }
+        
+        // Use Promise.all to fetch all book details in parallel
+        await Promise.all(
+          bookIds.map(async (bookId) => {
+            try {
+              const response = await axios.get(`http://localhost:8000/api/books/${bookId}`);
+              bookDetailsMap[bookId] = response.data;
+            } catch (error) {
+              console.error(`Error fetching details for book ${bookId}:`, error);
+            }
+          })
+        );
+        
+        setBookDetails(bookDetailsMap);
+        
+        // Transform cart data into array format for rendering
+        const cartItemsArray = bookIds.map(bookId => {
+          const cartItem = parsedGuestCart[bookId];
+          const book = bookDetailsMap[bookId];
+          
+          return {
+            id: bookId,
+            title: cartItem.title || book?.book_title || 'Unknown Book',
+            author: cartItem.author || book?.author?.author_name || 'Unknown Author',
+            price: cartItem.price || book?.discounts?.[0]?.discount_price || book?.book_price || 0,
+            quantity: cartItem.quantity,
+            image: cartItem.image || book?.book_cover_photo || ''
+          };
+        });
+        
+        console.log("Cart items array for guest:", cartItemsArray);
+        setCartItems(cartItemsArray);
+      } else {
+        setCartItems([]);
+      }
+    } catch (error) {
+      console.error('Error parsing guest cart data from localStorage:', error);
+      setCartItems([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-      const storedCart = JSON.parse(localStorage.getItem('cart') || '{}');
-      if (storedCart[userId] && storedCart[userId][id]) {
-        delete storedCart[userId][id];
-        localStorage.setItem('cart', JSON.stringify(storedCart));
+  const updateQuantity = (id, newQuantity) => {
+    console.log(`Updating quantity for book ${id} to ${newQuantity}`);
+    console.log(`User ID: ${userId ? userId : 'Guest'}`);
+    
+    if (newQuantity > 8) return;
+    
+    if (newQuantity <= 0) {
+      setCartItems(cartItems.filter(item => item.id != id));
+      
+      if (userId) {
+        // For logged-in users
+        const storedCart = JSON.parse(localStorage.getItem('cart') || '{}');
+        if (storedCart[userId] && storedCart[userId][id]) {
+          delete storedCart[userId][id];
+          localStorage.setItem('cart', JSON.stringify(storedCart));
+        }
+      } else {
+        // For guest users
+        const storedGuestCart = JSON.parse(localStorage.getItem('guestCart') || '{}');
+        if (storedGuestCart[id]) {
+          delete storedGuestCart[id];
+          localStorage.setItem('guestCart', JSON.stringify(storedGuestCart));
+          console.log("Removed item from guest cart:", id);
+          console.log("Updated guest cart:", JSON.parse(localStorage.getItem('guestCart')));
+        }
       }
       return;
     }
       
-    
     // Update state for UI
     setCartItems(cartItems.map(item => 
       item.id === id ? {...item, quantity: newQuantity} : item
     ));
     
     // Update localStorage
-    const storedCart = JSON.parse(localStorage.getItem('cart') || '{}');
-    if (storedCart[userId] && storedCart[userId][id]) {
-      storedCart[userId][id].quantity = newQuantity;
-      localStorage.setItem('cart', JSON.stringify(storedCart));
+    if (userId) {
+      // For logged-in users
+      const storedCart = JSON.parse(localStorage.getItem('cart') || '{}');
+      if (storedCart[userId] && storedCart[userId][id]) {
+        storedCart[userId][id].quantity = newQuantity;
+        localStorage.setItem('cart', JSON.stringify(storedCart));
+      }
+    } else {
+      // For guest users
+      const storedGuestCart = JSON.parse(localStorage.getItem('guestCart') || '{}');
+      if (storedGuestCart[id]) {
+        storedGuestCart[id].quantity = newQuantity;
+        localStorage.setItem('guestCart', JSON.stringify(storedGuestCart));
+        console.log("Updated guest cart item quantity:", id, newQuantity);
+        console.log("Updated guest cart:", JSON.parse(localStorage.getItem('guestCart')));
+      }
     }
   };
 
@@ -237,6 +403,13 @@ export default function ShoppingCart() {
 
   return (
     <div className="max-w-6xl w-full mx-auto p-6 mt-40">
+      {/* Login popup */}
+      <LoginPopup 
+        isOpen={showLoginPopup} 
+        onClose={() => setShowLoginPopup(false)} 
+        onLogin={handleSuccessfulLogin}
+      />
+      
       <h2 className="text-xl font-medium mb-6">Your cart: {cartItems.length} items</h2>
       
       <div className="flex flex-col md:flex-row gap-6">
@@ -255,14 +428,15 @@ export default function ShoppingCart() {
                 <tr 
                   key={item.id} 
                   className="text-sm cursor-pointer hover:bg-gray-50"
-                  onClick={() => window.open(`/product/${item.id}`, '_blank')}
+                  
                 >
                   <td className="p-4">
                     <div className="flex items-center">
                       <div className="w-24 h-28 bg-gray-200 flex-shrink-0 mr-6 flex items-center justify-center">
                         {imageErrors[item.id] ? (
-                          <div className="flex items-center justify-center w-full h-full">
+                          <div  className="flex items-center justify-center w-full h-full">
                             <img 
+                            
                               src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/65/No-Image-Placeholder.svg/1200px-No-Image-Placeholder.svg.png" 
                               alt="No image available" 
                               className="w-full h-full object-contain"
@@ -278,7 +452,7 @@ export default function ShoppingCart() {
                         )}
                       </div>
                       <div>
-                        <p className="font-medium text-base">{item.title}</p>
+                        <p className="font-medium text-base" onClick={() => window.open(`/product/${item.id}`, '_blank')} >{item.title} </p>
                         <p className="text-gray-500 text-sm">{item.author}</p>
                       </div>
                     </div>
