@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { StarIcon } from '@heroicons/react/24/solid';
-
-
 import { StarIcon as StarIconOutline } from '@heroicons/react/24/outline';
 import Cookies from 'js-cookie';
 import LoginPopup from './LoginPopup';
+import Notification from './PopUpNotification'; // Import the Notification component
 
 // Review Item Component to display individual reviews
 // function ReviewItem({ review }) {
@@ -39,6 +38,30 @@ function ReviewForm({ bookId, onReviewSubmitted }) {
   const [error, setError] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
+  // Add notification state
+  const [notification, setNotification] = useState({
+    message: '',
+    type: 'success',
+    isVisible: false
+  });
+  
+  // Show notification helper function
+  const showNotification = (message, type = 'success') => {
+    setNotification({
+      message,
+      type,
+      isVisible: true
+    });
+  };
+
+  // Close notification helper function
+  const closeNotification = () => {
+    setNotification(prev => ({
+      ...prev,
+      isVisible: false
+    }));
+  };
+  
   // Check if user is logged in
   useEffect(() => {
     const token = localStorage.getItem('token') || Cookies.get('token');
@@ -46,7 +69,7 @@ function ReviewForm({ bookId, onReviewSubmitted }) {
   }, []);
   
   const handleSubmit = async (e) => {
-    // e.preventDefault();
+    e.preventDefault();
     
     if (!isLoggedIn) {
       setError('Please log in to submit a review');
@@ -83,6 +106,9 @@ function ReviewForm({ bookId, onReviewSubmitted }) {
         throw new Error(errorData.detail || 'Failed to submit review');
       }
       
+      // Show success notification
+      showNotification('Your review has been submitted successfully!', 'success');
+      
       // Clear form fields
       setTitle('');
       setContent('');
@@ -109,6 +135,15 @@ function ReviewForm({ bookId, onReviewSubmitted }) {
   return (
     <div className="">
       <h2 className="text-xl font-bold mb-4">Write a Review</h2>
+      
+      {/* Notification component */}
+      <Notification 
+        message={notification.message}
+        type={notification.type}
+        isVisible={notification.isVisible}
+        onClose={closeNotification}
+        duration={3000}
+      />
       
       {error && <p className="text-red-500 mb-4">{error}</p>}
       
