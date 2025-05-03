@@ -249,20 +249,24 @@ export default function ShopPage() {
         className="container relative mx-auto py-4 pt-20 px-6 md:px-20 lg:px-32 my-20 w-full"
         id="Projects"
       >
-        <div className="flex justify-between items-center mb-6 border-b border-gray-400">
+        <div className="flex items-center mb-6 border-b border-gray-400">
           <h1 className="text-2xl sm:text-4xl font-bold mb-2 text-left">
             Shop Page
+            
           </h1>
+          <p className="text-lg ml-5">Filter By: {
+            (selectedAuthor ? authors.find(a => a.id === parseInt(selectedAuthor, 10))?.author_name || '' : 'All Authors') + 
+            (star ? ` / ${star} Star${star === '1' ? '' : 's'} & Up` : ' / All Ratings') + 
+            (selectedCategory ? ` / ${category.find(c => c.id === parseInt(selectedCategory, 10))?.category_name || ''}` : '/ All Categories')
+          }</p>
+          
         </div>
 
         {/* Filter Section */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
           <div className="flex flex-row">
-          <p className="text-lg">Filter By: {
-            (selectedAuthor ? authors.find(a => a.id === parseInt(selectedAuthor, 10))?.author_name || '' : 'All Authors') + 
-            (star ? ` / ${star} Star${star === '1' ? '' : 's'} & Up` : ' / All Ratings') + 
-            (selectedCategory ? ` / ${category.find(c => c.id === parseInt(selectedCategory, 10))?.category_name || ''}` : '/ All Categories')
-          }</p>
+          <p className="text-lg">Filter By:
+          </p>
           <p className="text-lg ml-40">
             {totalBooks === 0 ? 
               "0 results found" : 

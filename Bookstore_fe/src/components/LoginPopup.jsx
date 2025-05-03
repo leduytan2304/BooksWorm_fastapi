@@ -37,61 +37,68 @@ export default  function LoginPopup({ isOpen, onClose, onLogin }) {
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict'
       });
-      
-      // Save user email to cookies
+
+      // Save user information to cookies
       Cookies.set('userEmail', data.user_email || email, {
         expires: 7,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict'
       });
-      
-      // Fetch user data to get user ID
-      const userResponse = await fetch('http://localhost:8000/api/users/me', {
-        headers: {
-          'Authorization': `Bearer ${data.access_token}`
-        }
-      });
-      
-      if (userResponse.ok) {
-        const userData = await userResponse.json();
-        const userId = userData.id;
-        
-        // Save userId to cookies so it's available across the app
-        Cookies.set('userId', userId.toString(), {
+
+      // Save user's first and last name
+      if (data.first_name) {
+        Cookies.set('firstName', data.first_name, {
           expires: 7,
           secure: process.env.NODE_ENV === 'production',
           sameSite: 'strict'
         });
+      }
+
+      if (data.last_name) {
+        Cookies.set('lastName', data.last_name, {
+          expires: 7,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict'
+        });
+      }
+
+      // Save user ID directly from token response
+      if (data.user_id) {
+        Cookies.set('userId', data.user_id.toString(), {
+          expires: 7,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict'
+        });
+      }
+      
+      // Merge guest cart with user cart
+      const guestCartData = JSON.parse(localStorage.getItem('guestCart') || '{}');
+      if (Object.keys(guestCartData).length > 0) {
+        // Get existing user cart
+        let cartData = JSON.parse(localStorage.getItem('cart') || '{}');
         
-        // Merge guest cart with user cart
-        const guestCartData = JSON.parse(localStorage.getItem('guestCart') || '{}');
-        if (Object.keys(guestCartData).length > 0) {
-          // Get existing user cart
-          let cartData = JSON.parse(localStorage.getItem('cart') || '{}');
-          
-          // Initialize user's cart if it doesn't exist
-          if (!cartData[userId]) {
-            cartData[userId] = {};
-          }
-          
-          // Merge guest cart items into user cart
-          for (const [bookId, item] of Object.entries(guestCartData)) {
-            if (cartData[userId][bookId]) {
-              // If book already in user cart, add quantities (up to max 8)
-              const newQuantity = Math.min(cartData[userId][bookId].quantity + item.quantity, 8);
-              cartData[userId][bookId].quantity = newQuantity;
-            } else {
-              // Otherwise add the item to user cart
-              cartData[userId][bookId] = item;
-            }
-          }
-          
-          // Save updated cart to localStorage
-          localStorage.setItem('cart', JSON.stringify(cartData));
-          
-          // Clear guest cart
-          localStorage.removeItem('guestCart');
+        // Initialize user's cart if it doesn't exist
+        if (!cartData[data.user_id]) {
+          cartData[data.user_id] = {};
         }
+        
+        // Merge guest cart items into user cart
+        for (const [bookId, item] of Object.entries(guestCartData)) {
+          if (cartData[data.user_id][bookId]) {
+            // If book already in user cart, add quantities (up to max 8)
+            const newQuantity = Math.min(cartData[data.user_id][bookId].quantity + item.quantity, 8);
+            cartData[data.user_id][bookId].quantity = newQuantity;
+          } else {
+            // Otherwise add the item to user cart
+            cartData[data.user_id][bookId] = item;
+          }
+        }
+        
+        // Save updated cart to localStorage
+        localStorage.setItem('cart', JSON.stringify(cartData));
+        
+        // Clear guest cart
+        localStorage.removeItem('guestCart');
       }
       
       // Call onLogin callback

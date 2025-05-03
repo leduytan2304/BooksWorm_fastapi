@@ -222,29 +222,87 @@ function ReviewForm({ bookId, onReviewSubmitted }) {
 
 // Reviews list with sorting options
 function ReviewsSection({ bookId }) {
+  // State for reviews data
   const [reviews, setReviews] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [allReviews, setAllReviews] = useState([]);
+  const [totalReviews, setTotalReviews] = useState(0);
+  const [totalUnfilteredReviews, setTotalUnfilteredReviews] = useState(0);
+  const [averageRating, setAverageRating] = useState(0);
+  
+  // State for UI controls
+  const [starFilter, setStarFilter] = useState(null);
   const [sortOption, setSortOption] = useState('newest_to_oldest');
   const [reviewsPerPage, setReviewsPerPage] = useState(5);
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalReviews, setTotalReviews] = useState(0);
-  const [averageRating, setAverageRating] = useState(0);
-  const [starFilter, setStarFilter] = useState(null);
   
-  // Add these functions to your ReviewsSection component
+  // State for loading and errors
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  
+  // Get count of reviews for each star rating
   const getStarCount = (stars) => {
-    return reviews.filter(review => parseInt(review.rating_star) === stars).length;
+    return allReviews.filter(review => parseInt(review.rating_star) === stars).length;
   };
 
-  const filterByStars = (stars) => {
-    setStarFilter(stars === starFilter ? null : stars);
+  // Handle filter changes
+  const handleStarFilterChange = (stars) => {
+    // If clicking the same star, clear the filter
+    if (stars === starFilter) {
+      setStarFilter(null);
+    } else {
+      setStarFilter(stars);
+    }
+    // Always reset to first page when changing filters
     setCurrentPage(1);
   };
   
-  // Fetch reviews from the API
+  // Clear all filters
+  const clearAllFilters = () => {
+    setStarFilter(null);
+    setCurrentPage(1);
+  };
+  
+  // Handle sort option change
+  const handleSortChange = (event) => {
+    setSortOption(event.target.value);
+    setCurrentPage(1);
+  };
+  
+  // Handle reviews per page change
+  const handleReviewsPerPageChange = (event) => {
+    setReviewsPerPage(parseInt(event.target.value));
+    setCurrentPage(1);
+  };
+  
+  // Fetch all reviews (for star counts and total count)
+  useEffect(() => {
+    const fetchAllReviews = async () => {
+      if (!bookId) return;
+      
+      try {
+        const response = await fetch(`http://localhost:8000/api/reviews/${bookId}?limit=1000&offset=0`);
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch all reviews');
+        }
+        
+        const data = await response.json();
+        setAllReviews(data.reviews || []);
+        setTotalUnfilteredReviews(data.total_count || 0);
+      } catch (error) {
+        console.error('Error fetching all reviews:', error);
+      }
+    };
+    
+    fetchAllReviews();
+  }, [bookId]);
+  
+  // Fetch paginated and filtered reviews
   const fetchReviews = async () => {
+    if (!bookId) return;
+    
     setLoading(true);
+    
     try {
       // Calculate offset based on current page and reviews per page
       const offset = (currentPage - 1) * reviewsPerPage;
@@ -271,7 +329,6 @@ function ReviewsSection({ bookId }) {
       setReviews(data.reviews || []);
       setTotalReviews(data.total_count);
       setAverageRating(data.average_rating);
-      
     } catch (error) {
       setError('Error loading reviews');
       console.error('Error fetching reviews:', error);
@@ -280,91 +337,78 @@ function ReviewsSection({ bookId }) {
     }
   };
   
-  // Fetch reviews when component mounts or when dependencies change
+  // Fetch reviews when dependencies change
   useEffect(() => {
-    if (bookId) {
-      fetchReviews();
-    }
+    fetchReviews();
   }, [bookId, currentPage, sortOption, reviewsPerPage, starFilter]);
   
-  // Handle sort change
-  const handleSortChange = (event) => {
-    setSortOption(event.target.value);
-    setCurrentPage(1);
-  };
-  
-  // Handle reviews per page change
-  const handleReviewsPerPageChange = (event) => {
-    setReviewsPerPage(parseInt(event.target.value));
-    setCurrentPage(1);
-  };
-  
-  // Handle review submission
-  const handleReviewSubmitted = () => {
-    fetchReviews();
-  };
-  
   // Star rating display component
-  const StarRating = ({ rating }) => {
-    return (
-      <div className="flex">
-        {[1, 2, 3, 4, 5].map(star => (
-          <span key={star}>
-            <StarIcon 
-              className={`h-5 w-5 ${star <= rating ? 'text-yellow-400' : 'text-gray-300'}`}
-            />
-          </span>
-        ))}
-      </div>
-    );
-  };
-  
+  const StarRating = ({ rating }) => (
+    <div className="flex">
+      {[1, 2, 3, 4, 5].map(star => (
+        <span key={star}>
+          <StarIcon 
+            className={`h-5 w-5 ${star <= rating ? 'text-yellow-400' : 'text-gray-300'}`}
+          />
+        </span>
+      ))}
+    </div>
+  );
+
+  // Calculate pagination values
+  const startItem = totalReviews === 0 ? 0 : ((currentPage - 1) * reviewsPerPage) + 1;
+  const endItem = Math.min(currentPage * reviewsPerPage, totalReviews);
+  const totalPages = Math.ceil(totalReviews / reviewsPerPage);
+
   return (
-    <div className=" ">
+    <div className="">
       <div className="p-6 border-b border-gray-200">
-        <h2 className="text-xl font-bold">Customer Reviews {totalReviews > 0 && <span className="text-sm font-normal text-gray-500">
-          (Filter By {starFilter ? ` ${starFilter} stars` : sortOption === 'newest_to_oldest' ? 'newest to oldest' : 'oldest to newest'})
-        </span>}</h2>
+        <h2 className="text-xl font-bold">
+          Customer Reviews 
+          {totalReviews > 0 && (
+            <span className="text-sm font-normal text-gray-500">
+              (Filter By {starFilter ? ` ${starFilter} stars` : sortOption === 'newest_to_oldest' ? 'newest to oldest' : 'oldest to newest'})
+            </span>
+          )}
+        </h2>
         
         {/* Rating Summary */}
         <div className="mt-4">
           <div className="flex items-center">
             <div className="text-3xl font-bold mr-2">{averageRating.toFixed(1)}</div>
             <div>
-              {/* <div className="flex">
-                <StarRating rating={Math.round(averageRating)} />
-              </div> */}
               <p className='text-lg text-black'>Star</p> 
-              <div className="text-sm text-gray-500">({totalReviews} {totalReviews === 1 ? 'review' : 'reviews'})</div>
+              <div className="text-sm text-gray-500">
+                ({totalUnfilteredReviews} {totalUnfilteredReviews === 1 ? 'review' : 'reviews'})
+              </div>
             </div>
           </div> 
           
           {/* Star Distribution */}
           <div className="flex flex-wrap gap-2 mt-3">
-            <div>({totalReviews})</div>
+            <div 
+              className={`cursor-pointer hover:underline ${starFilter === null ? 'text-blue-600 font-medium' : 'hover:text-blue-600'}`}
+              onClick={clearAllFilters}
+            >
+              All ({totalUnfilteredReviews})
+            </div>
             {[5, 4, 3, 2, 1].map(stars => (
               <div 
                 key={stars}
-              
-                // onClick={() => filterByStars(stars)}
+                className={`cursor-pointer hover:underline ${starFilter === stars ? 'text-blue-600 font-medium' : 'hover:text-blue-600'}`}
+                onClick={() => handleStarFilterChange(stars)}
               >
                | {stars} star ({getStarCount(stars)})
               </div>
             ))}
-            {starFilter && (
-              <button 
-                className="px-2 py-1 text-xs border border-gray-300 rounded hover:bg-gray-100 text-red-500"
-                onClick={() => setStarFilter(null)}
-              >
-                Clear filter
-              </button>
-            )}
           </div>
           
           {/* Showing X-Y of Z reviews */}
-          <div className="mt-4 text-sm text-gray-500">
-            Showing {((currentPage - 1) * reviewsPerPage) + 1}-{Math.min(currentPage * reviewsPerPage, totalReviews)} of {totalReviews} reviews
-          </div>
+          {totalReviews > 0 && (
+            <div className="mt-4 text-sm text-gray-500">
+              Showing {startItem}-{endItem} of {totalReviews} reviews
+            </div>
+          )}
           
           {/* Sort options */}
           <div className="flex flex-wrap gap-2 mt-2">

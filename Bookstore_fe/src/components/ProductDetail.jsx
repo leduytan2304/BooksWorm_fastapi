@@ -252,6 +252,9 @@ export default function ProductDetail(props) {
               <p className="text-gray-700 leading-relaxed mb-4">
                 {book?.book_summary}
               </p>
+              <p className="text-gray-700 leading-relaxed mb-4">
+                {book?.description}
+              </p>
               
             </div>
           </div>

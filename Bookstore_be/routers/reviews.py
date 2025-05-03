@@ -93,6 +93,17 @@ async def get_review(
         total_count_result = db.execute(text(count_query), count_params).fetchone()
         total_count = total_count_result.total_count
         
+        # Query to get star counts for all ratings
+        star_counts_query = """
+            SELECT CAST(rating_star AS INTEGER) as star, COUNT(*) as count
+            FROM review
+            WHERE book_id = :book_id
+            GROUP BY CAST(rating_star AS INTEGER)
+            ORDER BY CAST(rating_star AS INTEGER) DESC
+        """
+        star_counts_result = db.execute(text(star_counts_query), {"book_id": book_id}).fetchall()
+        star_counts = {row.star: row.count for row in star_counts_result}
+        
         # Base query for fetching reviews
         base_query = """
             SELECT 
@@ -140,7 +151,8 @@ async def get_review(
         return {
             "reviews": reviews if reviews else [],
             "total_count": total_count,
-            "average_rating": avg_rating
+            "average_rating": avg_rating,
+            "star_counts": star_counts
         }
     except Exception as e:
         # Print the error for debugging

@@ -197,7 +197,9 @@ async def login_for_access_token(
         "access_token": access_token, 
         "token_type": "bearer",
         "user_email": user.email,
-        
+        "first_name": user.first_name,
+        "last_name": user.last_name,
+        "user_id": user.id
     }
 
 @router.get("/users/me", response_model=UserOut)
