@@ -63,10 +63,22 @@ export default function Navbar() {
     // Remove cookies
     Cookies.remove('token');
     Cookies.remove('userEmail');
+    Cookies.remove('userId');
     
     // Update state
     setIsLoggedIn(false);
     setUserEmail('');
+    setCartItemCount(0); // Reset cart count to 0
+    
+    // Clear user cart from localStorage (optional, but recommended)
+    const userId = Cookies.get('userId');
+    if (userId) {
+      const storedCart = JSON.parse(localStorage.getItem('cart') || '{}');
+      if (storedCart[userId]) {
+        delete storedCart[userId];
+        localStorage.setItem('cart', JSON.stringify(storedCart));
+      }
+    }
     
     // Redirect to home page
     navigate('/');
@@ -87,61 +99,50 @@ export default function Navbar() {
   // Get username from email (everything before @)
   const username = userEmail ? userEmail.split('@')[0] : '';
 
-  // Add this function to calculate cart items count
-  const calculateCartItemCount = () => {
-    try {
-      if (isLoggedIn) {
-        // For logged-in users
-        const storedCart = JSON.parse(localStorage.getItem('cart') || '{}');
+  // Simple useEffect to update cart count
+  useEffect(() => {
+    // Function to calculate cart items
+    const calculateCartCount = () => {
+      try {
+        const token = Cookies.get('token');
         const userId = Cookies.get('userId');
         
-        if (!userId || !storedCart[userId]) return 0;
-        
-        // Count total quantity of all items in user's cart
-        return Object.values(storedCart[userId]).reduce((total, item) => {
-          return total + item.quantity;
-        }, 0);
-      } else {
-        // For guest users
-        const guestCart = JSON.parse(localStorage.getItem('guestCart') || '{}');
-        
-        // Count total quantity of all items in guest cart
-        return Object.values(guestCart).reduce((total, item) => {
-          return total + item.quantity;
-        }, 0);
+        if (token && userId) {
+          // For logged-in users
+          const storedCart = JSON.parse(localStorage.getItem('cart') || '{}');
+          if (!storedCart[userId]) return 0;
+          
+          return Object.values(storedCart[userId]).reduce((total, item) => {
+            return total + item.quantity;
+          }, 0);
+        } else {
+          // For guest users
+          const guestCart = JSON.parse(localStorage.getItem('guestCart') || '{}');
+          return Object.values(guestCart).reduce((total, item) => {
+            return total + item.quantity;
+          }, 0);
+        }
+      } catch (error) {
+        console.error('Error calculating cart items:', error);
+        return 0;
       }
-    } catch (error) {
-      console.error('Error calculating cart items:', error);
-      return 0;
-    }
-  };
+    };
 
-  // Add this effect to update cart count when localStorage changes
-  useEffect(() => {
-    // Initial calculation
-    setCartItemCount(calculateCartItemCount());
+    // Update cart count immediately
+    setCartItemCount(calculateCartCount());
     
-    // Set up event listener for storage changes
-    const handleStorageChange = () => {
-      setCartItemCount(calculateCartItemCount());
+    // Listen for cart updates
+    const handleCartUpdate = () => {
+      setCartItemCount(calculateCartCount());
     };
     
-    window.addEventListener('storage', handleStorageChange);
+    window.addEventListener('cartUpdated', handleCartUpdate);
     
-    // Custom event for cart updates that happen in the same window
-    window.addEventListener('cartUpdated', handleStorageChange);
-    
-    // Check cart count every second (for changes that might not trigger storage event)
-    const intervalId = setInterval(() => {
-      setCartItemCount(calculateCartItemCount());
-    }, 1000);
-    
+    // Clean up event listener on unmount
     return () => {
-      window.removeEventListener('storage', handleStorageChange);
-      window.removeEventListener('cartUpdated', handleStorageChange);
-      clearInterval(intervalId);
+      window.removeEventListener('cartUpdated', handleCartUpdate);
     };
-  }, [isLoggedIn]);
+  }, []);
 
   return (
     <>
@@ -160,10 +161,14 @@ export default function Navbar() {
               Shop
             </Link>
             <li className="relative">
-            <Link className=" cursor-pointer hover:text-gray-400" to="/cart" >
-              Cart
-              <span className="absolute -top-1 -right-3 bg-red-500 text-white text-xs rounded-full px-1" >0</span>
-            </Link>
+              <Link className="cursor-pointer hover:text-gray-400" to="/cart">
+                Cart
+                {cartItemCount > 0 && (
+                  <span className="absolute -top-1 -right-3 bg-red-500 text-white text-xs rounded-full px-1">
+                    {cartItemCount}
+                  </span>
+                )}
+              </Link>
             </li>
             
             
@@ -281,6 +286,16 @@ export default function Navbar() {
     </>
   );
 }
+
+
+
+
+
+
+
+
+
+
 
 
 
