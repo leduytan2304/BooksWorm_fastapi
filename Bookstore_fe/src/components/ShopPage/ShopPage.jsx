@@ -167,15 +167,20 @@ export default function ShopPage() {
         
         // Add category filter if selected
         if (selectedCategory) {
-          e
+          url += `&category_id=${parseInt(selectedCategory, 10)}`;
         }
+        
+        console.log("Fetching total books count with URL:", url);
         
         const response = await axios.get(url);
         // Count the total number of books returned
         const count = response.data.length;
+        console.log("Total books count:", count);
         setTotalBooks(count);
       } catch (err) {
         console.error("Error fetching total book count:", err);
+        // Set totalBooks to 0 on error
+        setTotalBooks(0);
       }
     };
 
@@ -258,7 +263,12 @@ export default function ShopPage() {
             (star ? ` / ${star} Star${star === '1' ? '' : 's'} & Up` : ' / All Ratings') + 
             (selectedCategory ? ` / ${category.find(c => c.id === parseInt(selectedCategory, 10))?.category_name || ''}` : '/ All Categories')
           }</p>
-          <p className="text-lg ml-40">Show   { Math.max(1,showPage * (currentPage - 1) )} - {Math.min(totalBooks,currentPage * showPage) } of {totalBooks}</p>
+          <p className="text-lg ml-40">
+            {totalBooks === 0 ? 
+              "0 results found" : 
+              `Show ${Math.max(1, showPage * (currentPage - 1))} - ${Math.min(totalBooks, currentPage * showPage)} of ${totalBooks}`
+            }
+          </p>
           </div>
          
           <div className="flex flex-row gap-10">
@@ -501,6 +511,9 @@ export default function ShopPage() {
     </>
   );
 }
+
+
+
 
 
 
