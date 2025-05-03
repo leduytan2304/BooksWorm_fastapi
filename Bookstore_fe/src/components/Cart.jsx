@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import axios from 'axios';
 import Cookies from 'js-cookie';
 import LoginPopup from './LoginPopup';
+import Notification from './Notification'; // Import the Notification component
 
 export default function ShoppingCart() {
   const [cartItems, setCartItems] = useState([]);
@@ -10,6 +11,35 @@ export default function ShoppingCart() {
   const [bookDetails, setBookDetails] = useState({});
   const [imageErrors, setImageErrors] = useState({});
   const [showLoginPopup, setShowLoginPopup] = useState(false);
+  
+  // Add confirmation state
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [itemToDelete, setItemToDelete] = useState(null);
+  const [itemTitle, setItemTitle] = useState('');
+  
+  // Add notification state
+  const [notification, setNotification] = useState({
+    message: '',
+    type: 'success',
+    isVisible: false
+  });
+
+  // Show notification helper function
+  const showNotification = (message, type = 'success') => {
+    setNotification({
+      message,
+      type,
+      isVisible: true
+    });
+  };
+
+  // Close notification helper function
+  const closeNotification = () => {
+    setNotification(prev => ({
+      ...prev,
+      isVisible: false
+    }));
+  };
 
   // Handle image loading errors
   const handleImageError = (bookId) => {
@@ -30,7 +60,7 @@ export default function ShoppingCart() {
     
     try {
       if (cartItems.length === 0) {
-        alert('Your cart is empty');
+        showNotification('Your cart is empty', 'error');
         return;
       }
       
@@ -51,7 +81,7 @@ export default function ShoppingCart() {
       if (!orderResponse.ok) {
         const errorData = await orderResponse.json().catch(() => ({ detail: 'Could not parse error response' }));
         console.error('Server error response:', errorData);
-        alert(`Error: ${errorData.detail || 'Unknown server error'}`);
+        showNotification(`Error: ${errorData.detail || 'Unknown server error'}`, 'error');
         return;
       }
       
@@ -83,11 +113,12 @@ export default function ShoppingCart() {
         const firstErrorResponse = failedResponses[0];
         const errorData = await firstErrorResponse.json().catch(() => ({ detail: 'Could not parse error response' }));
         console.error('Server error response for order item:', errorData);
-        alert(`Error adding items to order: ${errorData.detail || 'Unknown server error'}`);
+        showNotification(`Error adding items to order: ${errorData.detail || 'Unknown server error'}`, 'error');
         return;
       }
       
-      alert(`Order created successfully! Order ID: ${orderId}`);
+      // Show success notification for 10 seconds
+      showNotification(`Order placed successfully! Order ID: ${orderId}`, 'success');
       
       // Clear cart after successful order
       if (userId) {
@@ -100,12 +131,17 @@ export default function ShoppingCart() {
           localStorage.setItem('cart', JSON.stringify(storedCart));
         }
         
-        // Refresh the page to show empty cart
-        window.location.reload();
+        // Dispatch event to update navbar
+        window.dispatchEvent(new Event('cartUpdated'));
+        
+        // Wait for notification to be visible for the full 10 seconds before redirecting to home page
+        setTimeout(() => {
+          window.location.href = '/'; // Redirect to home page
+        }, 10000); // Match the notification duration (10 seconds)
       }
     } catch (error) {
       console.error('Error creating order:', error);
-      alert(`Error creating order: ${error.message}`);
+      showNotification(`Error creating order: ${error.message}`, 'error');
     }
   };
 
@@ -197,6 +233,13 @@ export default function ShoppingCart() {
         
         const userData = await response.json();
         setUserId(userData.id);
+        
+        // Store userId in cookie for consistency across components
+        Cookies.set('userId', userData.id.toString(), {
+          expires: 7,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict'
+        });
         
         // Now load cart data
         loadCartData(userData.id);
@@ -331,32 +374,17 @@ export default function ShoppingCart() {
     }
   };
 
-  const updateQuantity = (id, newQuantity) => {
+  const updateQuantity = (id, newQuantity, title) => {
     console.log(`Updating quantity for book ${id} to ${newQuantity}`);
     console.log(`User ID: ${userId ? userId : 'Guest'}`);
     
     if (newQuantity > 8) return;
     
     if (newQuantity <= 0) {
-      setCartItems(cartItems.filter(item => item.id != id));
-      
-      if (userId) {
-        // For logged-in users
-        const storedCart = JSON.parse(localStorage.getItem('cart') || '{}');
-        if (storedCart[userId] && storedCart[userId][id]) {
-          delete storedCart[userId][id];
-          localStorage.setItem('cart', JSON.stringify(storedCart));
-        }
-      } else {
-        // For guest users
-        const storedGuestCart = JSON.parse(localStorage.getItem('guestCart') || '{}');
-        if (storedGuestCart[id]) {
-          delete storedGuestCart[id];
-          localStorage.setItem('guestCart', JSON.stringify(storedGuestCart));
-          console.log("Removed item from guest cart:", id);
-          console.log("Updated guest cart:", JSON.parse(localStorage.getItem('guestCart')));
-        }
-      }
+      // Instead of removing immediately, show confirmation
+      setItemToDelete(id);
+      setItemTitle(title);
+      setShowConfirmation(true);
       return;
     }
       
@@ -372,6 +400,9 @@ export default function ShoppingCart() {
       if (storedCart[userId] && storedCart[userId][id]) {
         storedCart[userId][id].quantity = newQuantity;
         localStorage.setItem('cart', JSON.stringify(storedCart));
+        
+        // Dispatch event to update navbar
+        window.dispatchEvent(new Event('cartUpdated'));
       }
     } else {
       // For guest users
@@ -380,9 +411,57 @@ export default function ShoppingCart() {
         storedGuestCart[id].quantity = newQuantity;
         localStorage.setItem('guestCart', JSON.stringify(storedGuestCart));
         console.log("Updated guest cart item quantity:", id, newQuantity);
-        console.log("Updated guest cart:", JSON.parse(localStorage.getItem('guestCart')));
+        
+        // Dispatch event to update navbar
+        window.dispatchEvent(new Event('cartUpdated'));
       }
     }
+  };
+
+  // Add confirmation handler
+  const confirmDelete = () => {
+    const id = itemToDelete;
+    
+    setCartItems(cartItems.filter(item => item.id != id));
+    
+    if (userId) {
+      // For logged-in users
+      const storedCart = JSON.parse(localStorage.getItem('cart') || '{}');
+      if (storedCart[userId] && storedCart[userId][id]) {
+        delete storedCart[userId][id];
+        localStorage.setItem('cart', JSON.stringify(storedCart));
+        // Dispatch event to update navbar
+        window.dispatchEvent(new Event('cartUpdated'));
+      }
+    } else {
+      // For guest users
+      const storedGuestCart = JSON.parse(localStorage.getItem('guestCart') || '{}');
+      if (storedGuestCart[id]) {
+        delete storedGuestCart[id];
+        localStorage.setItem('guestCart', JSON.stringify(storedGuestCart));
+        console.log("Removed item from guest cart:", id);
+        
+        // Dispatch event to update navbar
+        window.dispatchEvent(new Event('cartUpdated'));
+      }
+    }
+
+
+    
+    
+    // Show notification
+    showNotification(`"${itemTitle}" has been removed from your cart`, 'success');
+    
+    // Close confirmation dialog
+    setShowConfirmation(false);
+    setItemToDelete(null);
+    setItemTitle('');
+  };
+
+  const cancelDelete = () => {
+    setShowConfirmation(false);
+    setItemToDelete(null);
+    setItemTitle('');
   };
 
   const getTotal = (price, quantity) => {
@@ -409,6 +488,39 @@ export default function ShoppingCart() {
         onClose={() => setShowLoginPopup(false)} 
         onLogin={handleSuccessfulLogin}
       />
+      
+      {/* Notification component with longer duration for order success */}
+      <Notification 
+        message={notification.message}
+        type={notification.type}
+        isVisible={notification.isVisible}
+        onClose={closeNotification}
+        duration={10000} // 10 seconds for order notifications
+      />
+      
+      {/* Confirmation popup */}
+      {showConfirmation && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg max-w-md w-full">
+            <h3 className="text-lg font-medium mb-4">Remove Item</h3>
+            <p className="mb-6">Are you sure you want to remove "{itemTitle}" from your cart?</p>
+            <div className="flex justify-end space-x-4">
+              <button 
+                onClick={cancelDelete}
+                className="px-4 py-2 border rounded hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={confirmDelete}
+                className="px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700"
+              >
+                Remove
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       
       <h2 className="text-xl font-medium mb-6">Your cart: {cartItems.length} items</h2>
       
@@ -465,7 +577,7 @@ export default function ShoppingCart() {
                   <td className="p-4">
                     <div className="flex items-center justify-center">
                       <button 
-                        onClick={() => updateQuantity(item.id, item.quantity - 1)}
+                        onClick={() => updateQuantity(item.id, item.quantity - 1, item.title)}
                         className="bg-gray-200 p-2 rounded"
                       >
                         {/* Minus Icon */}
@@ -475,7 +587,7 @@ export default function ShoppingCart() {
                       </button>
                       <span className="mx-4 w-8 text-center text-base">{item.quantity}</span>
                       <button 
-                        onClick={() => updateQuantity(item.id, item.quantity + 1)}
+                        onClick={() => updateQuantity(item.id, item.quantity + 1, item.title)}
                         className="bg-gray-200 p-2 rounded"
                       >
                         {/* Plus Icon */}
