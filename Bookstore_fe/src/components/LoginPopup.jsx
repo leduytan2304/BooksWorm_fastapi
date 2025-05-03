@@ -56,6 +56,13 @@ export default  function LoginPopup({ isOpen, onClose, onLogin }) {
         const userData = await userResponse.json();
         const userId = userData.id;
         
+        // Save userId to cookies so it's available across the app
+        Cookies.set('userId', userId.toString(), {
+          expires: 7,
+          secure: process.env.NODE_ENV === 'production',
+          sameSite: 'strict'
+        });
+        
         // Merge guest cart with user cart
         const guestCartData = JSON.parse(localStorage.getItem('guestCart') || '{}');
         if (Object.keys(guestCartData).length > 0) {
@@ -92,6 +99,9 @@ export default  function LoginPopup({ isOpen, onClose, onLogin }) {
       
       // Close the popup
       onClose();
+      
+      // Dispatch cart updated event to refresh navbar
+      window.dispatchEvent(new Event('cartUpdated'));
       
       // Reload the page
       window.location.reload();
