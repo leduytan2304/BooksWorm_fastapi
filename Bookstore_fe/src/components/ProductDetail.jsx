@@ -115,14 +115,15 @@ export default function ProductDetail(props) {
       // Save updated guest cart to localStorage
       localStorage.setItem('guestCart', JSON.stringify(guestCartData));
       console.log("Updated guest cart:", JSON.parse(localStorage.getItem('guestCart')));
+      
+      // Dispatch event to update navbar
+      window.dispatchEvent(new Event('cartUpdated'));
       return;
     }
     
     // For logged-in users, continue with the existing cart logic
     // Get existing cart data from localStorage or initialize empty object
     let cartData = JSON.parse(localStorage.getItem('cart') || '{}');
-
-   
     
     // Initialize user's cart if it doesn't exist
     if (!cartData[userId]) {
@@ -152,6 +153,9 @@ export default function ProductDetail(props) {
     
     // Save updated cart to localStorage
     localStorage.setItem('cart', JSON.stringify(cartData));
+    
+    // Dispatch event to update navbar
+    window.dispatchEvent(new Event('cartUpdated'));
   };
   
   useEffect(() => {
