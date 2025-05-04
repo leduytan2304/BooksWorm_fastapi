@@ -61,7 +61,7 @@ export default function Card({ book }) {
 
       <div className="p-5 flex flex-col flex-grow">
         <h1 className="font-bold text-xl text-gray-800 line-clamp-2">{book_title}</h1>
-        <h2 className="mt-2 font-light text-sm text-gray-600 line-clamp-3">{book_summary}</h2>
+        <h2 className="mt-2 font-light text-sm text-gray-600 line-clamp-3">{author?.author_name || 'Unknown Author'}</h2>
       </div>
 
       <div className="px-5 pb-4 mt-auto">
@@ -79,6 +79,7 @@ export default function Card({ book }) {
     </div>
   );
 }
+
 
 
 
