@@ -139,7 +139,25 @@ export default function ShopPage() {
     const fetchAuthors = async () => {
       try {
         const response = await axios.get("http://localhost:8000/api/authors");
-        setAuthors(response.data);
+        
+        // Remove duplicates by author_name
+        const uniqueAuthorsMap = new Map();
+        response.data.forEach(author => {
+          // Only add if we don't already have this author name, or replace with this one
+          if (!uniqueAuthorsMap.has(author.author_name)) {
+            uniqueAuthorsMap.set(author.author_name, author);
+          }
+        });
+        
+        // Convert Map back to array and sort alphabetically
+        const uniqueAuthors = Array.from(uniqueAuthorsMap.values());
+        const sortedAuthors = uniqueAuthors.sort((a, b) => 
+          a.author_name.localeCompare(b.author_name)
+        );
+        
+        console.log("Original authors:", response.data.length);
+        console.log("Unique authors:", sortedAuthors.length);
+        setAuthors(sortedAuthors);
       } catch (err) {
         console.error("Error fetching authors:", err);
       }
@@ -368,7 +386,7 @@ export default function ShopPage() {
                       onClick={() => {
                         setSelectedAuthor('');
                         setAuthorDropdownOpen(false);
-                        console.log("Selected All Authors");
+                        setCurrentPage(1); // Reset to page 1 when filter changes
                       }}
                     >
                       All Authors
@@ -380,6 +398,7 @@ export default function ShopPage() {
                         onClick={() => {
                           setSelectedAuthor(author.id.toString());
                           setAuthorDropdownOpen(false);
+                          setCurrentPage(1); // Reset to page 1 when filter changes
                           console.log("Selected author:", author.id, author.author_name);
                         }}
                       >
@@ -515,6 +534,10 @@ export default function ShopPage() {
     </>
   );
 }
+
+
+
+
 
 
 
