@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from typing import List, Optional
 from datetime import datetime, date
 
@@ -50,7 +50,7 @@ class Reviews(BaseModel):
     id: int
     book_id: int
     user_id: Optional[int] = None
-    review_title: str
+    review_title: str = Field(..., max_length=120)  # Mandatory with max length 120
     review_details: Optional[str] = None
     review_date: datetime
     rating_star: Optional[int] = None
