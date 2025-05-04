@@ -60,18 +60,13 @@ export default function ProductDetail(props) {
   // Function to fetch user ID
   const fetchUserId = async (token) => {
     try {
-      const response = await fetch('http://127.0.0.1:8000/api/users/me', {
+      const response = await axios.get('http://127.0.0.1:8000/api/users/me', {
         headers: {
           'Authorization': `Bearer ${token}`
         }
       });
       
-      if (response.ok) {
-        const userData = await response.json();
-        setUserId(userData.id);
-      } else {
-        console.error('Failed to fetch user data');
-      }
+      setUserId(response.data.id);
     } catch (error) {
       console.error('Error fetching user data:', error);
     }
@@ -243,12 +238,12 @@ export default function ProductDetail(props) {
             {/* Book Information */}
             <div className="md:flex-[2]">
               <h1 className="text-3xl font-bold mb-3 text-gray-800">{book?.book_title}</h1>
-              <div className="flex items-center mb-4">
+              {/* <div className="flex items-center mb-4">
                 <div className="flex text-yellow-400">
                   <span>★</span><span>★</span><span>★</span><span>★</span><span className="text-gray-300">★</span>
                 </div>
                 <span className="ml-2 text-sm text-gray-600">(24 reviews)</span>
-              </div>
+              </div> */}
               <p className="text-gray-700 leading-relaxed mb-4">
                 {book?.book_summary}
               </p>

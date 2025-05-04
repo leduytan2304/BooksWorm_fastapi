@@ -2,8 +2,9 @@ import React, { useState, useEffect } from 'react';
 import { StarIcon } from '@heroicons/react/24/solid';
 import { StarIcon as StarIconOutline } from '@heroicons/react/24/outline';
 import Cookies from 'js-cookie';
+import axios from 'axios';
 import LoginPopup from './LoginPopup';
-import Notification from './PopUpNotification'; // Import the Notification component
+import Notification from './PopUpNotification';
 
 // Review Item Component to display individual reviews
 // function ReviewItem({ review }) {
@@ -76,8 +77,13 @@ function ReviewForm({ bookId, onReviewSubmitted }) {
       return;
     }
     
-    if (!title.trim() || !content.trim() || rating === 0) {
-      setError('Please fill in all fields and select a rating');
+    if (!title.trim() || rating === 0) {
+      setError('Please fill in the title and select a rating');
+      return;
+    }
+    
+    if (content.length > 120) {
+      setError('Review details must be 120 characters or less');
       return;
     }
       
@@ -87,24 +93,17 @@ function ReviewForm({ bookId, onReviewSubmitted }) {
     try {
       const token = localStorage.getItem('token') || Cookies.get('token');
       
-      const response = await fetch('http://localhost:8000/api/reviews', {
-        method: 'POST',
+      const response = await axios.post('http://localhost:8000/api/reviews', {
+        book_id: bookId,
+        title,
+        content,
+        rating
+      }, {
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          book_id: bookId,
-          title,
-          content,
-          rating
-        })
+        }
       });
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.detail || 'Failed to submit review');
-      }
       
       // Show success notification
       showNotification('Your review has been submitted successfully!', 'success');
@@ -120,7 +119,8 @@ function ReviewForm({ bookId, onReviewSubmitted }) {
       }
       
     } catch (error) {
-      setError(error.message || 'An error occurred while submitting your review');
+      const errorMessage = error.response?.data?.detail || 'An error occurred while submitting your review';
+      setError(errorMessage);
       console.error('Review submission error:', error);
     } finally {
       setIsSubmitting(false);
@@ -152,29 +152,46 @@ function ReviewForm({ bookId, onReviewSubmitted }) {
       ) : (
         <form onSubmit={handleSubmit}>
           <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Add a title</label>
-            <input 
-              type="text" 
-              value={title} 
+            <label className="block text-gray-700 mb-2" htmlFor="title">
+              Review Title <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              id="title"
+              name="title"
+              value={title}
               onChange={(e) => setTitle(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded"
-              placeholder=""
+              maxLength={120}
               required
+              className="w-full px-3 py-2 border border-gray-300 rounded"
+              placeholder="Write a headline for your review"
             />
+            {title && title.length > 0 && (
+              <div className="text-xs text-gray-500 mt-1">
+                {title.length}/120 characters
+              </div>
+            )}
           </div>
           
-         
-          
           <div className="mb-4">
-            <label className="block text-gray-700 mb-2">Details please! Your review helps other shoppers.</label>
-            <textarea 
-              value={content} 
+            <label className="block text-gray-700 mb-2" htmlFor="content">
+              Review Details 
+            </label>
+            <textarea
+              id="content"
+              name="content"
+              value={content}
               onChange={(e) => setContent(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded"
+              maxLength={120}
+              className="w-full px-3 py-2 border border-gray-300 rounded"
               rows="4"
-              placeholder="What did you like or dislike? What did you use this product for?"
-              required
+              placeholder="Write your review (optional)"
             ></textarea>
+            {content && content.length > 0 && (
+              <div className="text-xs text-gray-500 mt-1">
+                {content.length}/120 characters
+              </div>
+            )}
           </div>
           <div className="mb-4">
             <label className="block text-gray-700 mb-2">Select a rating star</label>
@@ -221,7 +238,7 @@ function ReviewForm({ bookId, onReviewSubmitted }) {
 }
 
 // Reviews list with sorting options
-function ReviewsSection({ bookId }) {
+function ReviewsSection({ bookId, refreshTrigger }) {
   // State for reviews data
   const [reviews, setReviews] = useState([]);
   const [allReviews, setAllReviews] = useState([]);
@@ -280,22 +297,22 @@ function ReviewsSection({ bookId }) {
       if (!bookId) return;
       
       try {
-        const response = await fetch(`http://localhost:8000/api/reviews/${bookId}?limit=1000&offset=0`);
+        const response = await axios.get(`http://localhost:8000/api/reviews/${bookId}`, {
+          params: {
+            limit: 1000,
+            offset: 0
+          }
+        });
         
-        if (!response.ok) {
-          throw new Error('Failed to fetch all reviews');
-        }
-        
-        const data = await response.json();
-        setAllReviews(data.reviews || []);
-        setTotalUnfilteredReviews(data.total_count || 0);
+        setAllReviews(response.data.reviews || []);
+        setTotalUnfilteredReviews(response.data.total_count || 0);
       } catch (error) {
         console.error('Error fetching all reviews:', error);
       }
     };
     
     fetchAllReviews();
-  }, [bookId]);
+  }, [bookId, refreshTrigger]); // Add refreshTrigger as dependency
   
   // Fetch paginated and filtered reviews
   const fetchReviews = async () => {
@@ -308,27 +325,28 @@ function ReviewsSection({ bookId }) {
       const offset = (currentPage - 1) * reviewsPerPage;
       
       // Build the API URL with query parameters
-      let url = `http://localhost:8000/api/reviews/${bookId}?sort_by=${sortOption}&limit=${reviewsPerPage}&offset=${offset}`;
+      let url = `http://localhost:8000/api/reviews/${bookId}`;
+      
+      // Create params object for axios
+      const params = {
+        sort_by: sortOption,
+        limit: reviewsPerPage,
+        offset: offset
+      };
       
       // Add star filter if selected
       if (starFilter) {
-        url += `&rating_star=${starFilter}`;
+        params.rating_star = starFilter;
       }
       
       console.log('Fetching reviews with URL:', url);
       
-      const response = await fetch(url);
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch reviews');
-      }
-      
-      const data = await response.json();
+      const response = await axios.get(url, { params });
       
       // Update state with the response data
-      setReviews(data.reviews || []);
-      setTotalReviews(data.total_count);
-      setAverageRating(data.average_rating);
+      setReviews(response.data.reviews || []);
+      setTotalReviews(response.data.total_count);
+      setAverageRating(response.data.average_rating);
     } catch (error) {
       setError('Error loading reviews');
       console.error('Error fetching reviews:', error);
@@ -340,7 +358,7 @@ function ReviewsSection({ bookId }) {
   // Fetch reviews when dependencies change
   useEffect(() => {
     fetchReviews();
-  }, [bookId, currentPage, sortOption, reviewsPerPage, starFilter]);
+  }, [bookId, currentPage, sortOption, reviewsPerPage, starFilter, refreshTrigger]); // Add refreshTrigger as dependency
   
   // Star rating display component
   const StarRating = ({ rating }) => (
@@ -366,7 +384,7 @@ function ReviewsSection({ bookId }) {
         <h2 className="text-xl font-bold">
           Customer Reviews 
           {totalReviews > 0 && (
-            <span className="text-sm font-normal text-gray-500">
+            <span className="text-sm font-normal ml-5  text-gray-500">
               (Filter By {starFilter ? ` ${starFilter} stars` : sortOption === 'newest_to_oldest' ? 'newest to oldest' : 'oldest to newest'})
             </span>
           )}
@@ -447,7 +465,11 @@ function ReviewsSection({ bookId }) {
           reviews.map((review) => (
             <div key={review.id || review._id} className="p-6">
               <h3 className="text-lg font-semibold">{review.review_title} <span className="text-sm font-normal">({review.rating_star} stars)</span></h3>
-              <p className="text-gray-700 my-2">{review.review_details}</p>
+              <p className="text-gray-700 my-2">
+                {review.review_details && review.review_details.length > 30 
+                  ? review.review_details.substring(0, 30) + '...' 
+                  : review.review_details}
+              </p>
               <div className="text-sm text-gray-500">
                {new Date(review.review_date).toLocaleDateString()}
               </div>
@@ -503,15 +525,21 @@ function ReviewsSection({ bookId }) {
 
 // Export the component to be used in the ProductDetail component
 export default function ProductReviews({ bookId }) {
+  const [refreshTrigger, setRefreshTrigger] = useState(0);
+  
+  const handleReviewSubmitted = () => {
+    // Increment refresh trigger to cause ReviewsSection to re-fetch data
+    setRefreshTrigger(prev => prev + 1);
+  };
+
   return (
-    <div className="flex flex-col lg:flex-row gap-6 mt-10  overflow-hidden">
-      
-        <div className="flex-[3] bg-white p-6  border-solid border-gray-400 rounded-lg border-2">
-          <ReviewsSection bookId={bookId} />
-        </div>
-        <div className="flex-[1] bg-gray-50 p-6 border-solid border-gray-400 rounded-lg border-2">
-          <ReviewForm bookId={bookId} onReviewSubmitted={() => {}} />
-        </div>
+    <div className="flex flex-col lg:flex-row gap-6 mt-10 overflow-hidden">
+      <div className="flex-[3] bg-white p-6 border-solid border-gray-400 rounded-lg border-2">
+        <ReviewsSection bookId={bookId} refreshTrigger={refreshTrigger} />
       </div>
+      <div className="flex-[1] bg-gray-50 p-6 border-solid border-gray-400 rounded-lg border-2">
+        <ReviewForm bookId={bookId} onReviewSubmitted={handleReviewSubmitted} />
+      </div>
+    </div>
   );
 }

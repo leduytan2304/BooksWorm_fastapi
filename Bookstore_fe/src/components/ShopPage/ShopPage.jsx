@@ -270,7 +270,7 @@ export default function ShopPage() {
           <p className="text-lg ml-40">
             {totalBooks === 0 ? 
               "0 results found" : 
-              `Show ${Math.max(1, showPage * (currentPage - 1))} - ${Math.min(totalBooks, currentPage * showPage)} of ${totalBooks}`
+              `Show ${Math.max(1, (showPage * (currentPage - 1)) + 1)} - ${Math.min(totalBooks, currentPage * showPage)} of ${totalBooks}`
             }
           </p>
           </div>
@@ -293,7 +293,7 @@ export default function ShopPage() {
         {/* Flex Layout Section */}
         <div className="flex flex-row">
           {/* Left Sidebar with Filter Dropdowns */}
-          <div className="mr-10 flex-[1] hidden md:block">
+          <div className="mr-10 flex-[1]">
             {/* Category Dropdown */}
             <div className="border border-gray-300 rounded-md p-4 mb-4 w-48 relative">
               <h2 className="text-lg font-bold mb-2">Category</h2>
@@ -515,6 +515,9 @@ export default function ShopPage() {
     </>
   );
 }
+
+
+
 
 
 

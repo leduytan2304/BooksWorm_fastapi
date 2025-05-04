@@ -67,55 +67,37 @@ export default function ShoppingCart() {
       const totalAmount = parseFloat(getCartTotal());
       
       // Create order first to get the order_id
-      const orderResponse = await fetch('http://localhost:8000/api/orders', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          order_amount: totalAmount
-        })
-      });
-      
-      if (!orderResponse.ok) {
-        const errorData = await orderResponse.json().catch(() => ({ detail: 'Could not parse error response' }));
-        console.error('Server error response:', errorData);
-        showNotification(`Error: ${errorData.detail || 'Unknown server error'}`, 'error');
-        return;
-      }
-      
-      const orderData = await orderResponse.json();
-      const orderId = orderData.order_id;
-      
-      // Now create order item using the order_id
-      const orderItemPromises = cartItems.map(item =>
-        fetch('http://localhost:8000/api/order-items', {
-          method: 'POST',
+      const orderResponse = await axios.post('http://localhost:8000/api/orders', 
+        { order_amount: totalAmount },
+        {
           headers: {
             'Content-Type': 'application/json',
             'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
+          }
+        }
+      );
+      
+      const orderId = orderResponse.data.order_id;
+      
+      // Now create order item using the order_id
+      const orderItemPromises = cartItems.map(item =>
+        axios.post('http://localhost:8000/api/order-items', 
+          {
             order_id: orderId,
             book_id: item.id,
             quantity: item.quantity,
             price: item.price
-          })
-        })
+          },
+          {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            }
+          }
+        )
       );
       
-      const orderItemResponse = await Promise.all(orderItemPromises);
-      const failedResponses = orderItemResponse.filter(response => !response.ok);
-
-      if (failedResponses.length > 0) {
-        // Get the first error message
-        const firstErrorResponse = failedResponses[0];
-        const errorData = await firstErrorResponse.json().catch(() => ({ detail: 'Could not parse error response' }));
-        console.error('Server error response for order item:', errorData);
-        showNotification(`Error adding items to order: ${errorData.detail || 'Unknown server error'}`, 'error');
-        return;
-      }
+      await Promise.all(orderItemPromises);
       
       // Show success notification for 10 seconds
       showNotification(`Order placed successfully! Order ID: ${orderId}`, 'success');
@@ -141,7 +123,8 @@ export default function ShoppingCart() {
       }
     } catch (error) {
       console.error('Error creating order:', error);
-      showNotification(`Error creating order: ${error.message}`, 'error');
+      const errorMessage = error.response?.data?.detail || error.message;
+      showNotification(`Error creating order: ${errorMessage}`, 'error');
     }
   };
 
