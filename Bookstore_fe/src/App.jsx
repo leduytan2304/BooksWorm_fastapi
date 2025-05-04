@@ -8,6 +8,7 @@ import ShopPage from "./components/ShopPage/ShopPage"
 import Navbar from './components/Navbar'
 import LoginPopup from './components/LoginPopup'
 import Cart from './components/Cart'
+import Footer from './components/Footer'
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom'
 import ProductDetail from './components/ProductDetail'
 import Cookies from 'js-cookie';
@@ -25,7 +26,7 @@ export default function App() {
 
   return (
     <Router>
-      <div className='w-full overflow-hidden'>
+      <div className='w-full overflow-hidden flex flex-col min-h-screen'>
         <Navbar onLoginClick={() => setShowLoginPopup(true)} />
         
         {/* Login popup that can appear on any page */}
@@ -35,22 +36,27 @@ export default function App() {
           onLogin={handleSuccessfulLogin}
         />
         
-        <Routes>
-          <Route path="/" element={
-            <>
-              {/* <Header/> */}
-              {/* <About/> */}
-              <OnSale/>
-              <Feature/>
-              {/* <ShopPage/> */}
-            </>
-          } />
-          <Route path="/about" element={<About />} />
-          <Route path="/product" element={<ShopPage />} />
-          <Route path="/cart" element={<Cart/>} />
-          <Route path="/product/:id" element={<ProductDetail/>} />
-        </Routes>
+        <main className="flex-grow">
+          <Routes>
+            <Route path="/" element={
+              <>
+                {/* <Header/> */}
+                {/* <About/> */}
+                <OnSale/>
+                <Feature/>
+                {/* <ShopPage/> */}
+              </>
+            } />
+            <Route path="/about" element={<About />} />
+            <Route path="/product" element={<ShopPage />} />
+            <Route path="/cart" element={<Cart/>} />
+            <Route path="/product/:id" element={<ProductDetail/>} />
+          </Routes>
+        </main>
+        
+        <Footer />
       </div>
     </Router>
   )
 }
+
