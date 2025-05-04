@@ -4,6 +4,7 @@ import { assets } from "../assets/assets";
 import Cookies from "js-cookie";
 import { ShoppingCartIcon } from '@heroicons/react/24/outline';
 import LoginPopup from "./LoginPopup";
+import axios from 'axios';
 
 export default function Navbar() {
   const [showMobileMenu, setShowMobileMenu] = useState(false);
@@ -29,35 +30,29 @@ export default function Navbar() {
     
     if (token) {
       try {
-        // Call the backend endpoint to get user data
-        const response = await fetch('http://localhost:8000/api/users/me', {
+        // Call the backend endpoint to get user data using axios
+        const response = await axios.get('http://localhost:8000/api/users/me', {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         });
         
-        if (response.ok) {
-          const userData = await response.json();
-          setIsLoggedIn(true);
-          setUserEmail(userData.email || '');
-          setFirstName(userData.first_name || Cookies.get('firstName') || '');
-          setLastName(userData.last_name || Cookies.get('lastName') || '');
-        } else {
-          // Token is invalid or expired
-          setIsLoggedIn(false);
-          setUserEmail('');
-          setFirstName('');
-          setLastName('');
-          Cookies.remove('token');
-          Cookies.remove('firstName');
-          Cookies.remove('lastName');
-        }
+        // Axios automatically parses JSON
+        const userData = response.data;
+        setIsLoggedIn(true);
+        setUserEmail(userData.email || '');
+        setFirstName(userData.first_name || Cookies.get('firstName') || '');
+        setLastName(userData.last_name || Cookies.get('lastName') || '');
       } catch (error) {
         console.error('Error fetching user data:', error);
+        // Token is invalid or expired
         setIsLoggedIn(false);
         setUserEmail('');
         setFirstName('');
         setLastName('');
+        Cookies.remove('token');
+        Cookies.remove('firstName');
+        Cookies.remove('lastName');
       }
     } else {
       setIsLoggedIn(false);
@@ -77,9 +72,8 @@ export default function Navbar() {
     
     if (token) {
       try {
-        // Call the backend logout endpoint
-        await fetch('http://localhost:8000/auth/logout', {
-          method: 'POST',
+        // Call the backend logout endpoint using axios
+        await axios.post('http://localhost:8000/auth/logout', {}, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
@@ -341,6 +335,7 @@ export default function Navbar() {
     </>
   );
 }
+
 
 
 
