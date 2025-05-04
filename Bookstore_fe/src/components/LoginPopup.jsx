@@ -1,7 +1,9 @@
 
 import React, { useState, useEffect } from 'react';
 import Cookies from 'js-cookie';
-export default  function LoginPopup({ isOpen, onClose, onLogin }) {
+import axios from 'axios';
+
+export default function LoginPopup({ isOpen, onClose, onLogin }) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
@@ -17,19 +19,13 @@ export default  function LoginPopup({ isOpen, onClose, onLogin }) {
       formData.append('username', email); // Backend expects 'username' for email
       formData.append('password', password);
       
-      const response = await fetch('http://localhost:8000/api/token', {
-        method: 'POST',
+      const response = await axios.post('http://localhost:8000/api/token', formData, {
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: formData,
+        }
       });
       
-      const data = await response.json();
-      
-      if (!response.ok) {
-        throw new Error(data.detail || 'Login failed');
-      }
+      const data = response.data;
       
       // Save token to cookies
       Cookies.set('token', data.access_token, { 
@@ -113,7 +109,8 @@ export default  function LoginPopup({ isOpen, onClose, onLogin }) {
       // Reload the page
       window.location.reload();
     } catch (error) {
-      setError(error.message || 'Invalid email or password');
+      const errorMessage = error.response?.data?.detail || 'Invalid email or password';
+      setError(errorMessage);
       console.error('Login error:', error);
     } finally {
       setIsLoading(false);
