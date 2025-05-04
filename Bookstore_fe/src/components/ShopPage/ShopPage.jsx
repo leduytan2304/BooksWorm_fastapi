@@ -417,6 +417,7 @@ export default function ShopPage() {
                 className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
                 onChange={(e) => {
                   setStar(e.target.value);
+                  setCurrentPage(1); // Reset to page 1 when rating filter changes
                   console.log("Rating selected:", e.target.value);
                 }}
                 value={star}
@@ -534,6 +535,7 @@ export default function ShopPage() {
     </>
   );
 }
+
 
 
 
