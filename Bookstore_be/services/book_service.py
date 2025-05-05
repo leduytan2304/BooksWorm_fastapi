@@ -266,7 +266,7 @@ def get_books_with_filter(
             "star_value": star_value,
             "search_term": search_term,
             "offset": offset, 
-            "limit": limit if limit else 100
+            "limit": limit 
         })
         books = result.fetchall()
         

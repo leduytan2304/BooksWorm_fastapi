@@ -199,7 +199,7 @@ export default function ShopPage() {
     const fetchTotalBooks = async () => {
       try {
         // Build URL with all current filters
-        let url = `http://localhost:8000/api/books?filterBy=${selectedOption}`;
+        let url = `http://localhost:8000/api/books?filterBy=${selectedOption}&limit=10000`;
         
         // Add author_id filter if selected
         if (selectedAuthor) {
@@ -644,6 +644,7 @@ export default function ShopPage() {
     </>
   );
 }
+
 
 
 
