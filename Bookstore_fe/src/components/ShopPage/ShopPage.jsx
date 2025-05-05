@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Card from "./Card";
 import Pagination from "./Pagination";
+import { useLocation, useNavigate } from "react-router-dom";
 import { ChevronDownIcon, MinusIcon, PlusIcon, ShoppingCartIcon } from '@heroicons/react/24/solid';
 
 function Dropdown({ selectedOption, setSelectedOption, setCurrentPage }) {
@@ -121,6 +122,10 @@ function DropdownShowPage({ showPage, setShowPage, setCurrentPage }) {
 }
 
 export default function ShopPage() {
+  const location = useLocation();
+  const navigate = useNavigate();
+  const queryParams = new URLSearchParams(location.search);
+  
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedOption, setSelectedOption] = useState("discount_desc");
@@ -134,6 +139,21 @@ export default function ShopPage() {
   const [star, setStar] = useState("");
   const [category, setCategory] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
+  const [searchQuery, setSearchQuery] = useState(queryParams.get("search") || "");
+  const [ratingDropdownOpen, setRatingDropdownOpen] = useState(false);
+  
+  // Parse URL parameters when component mounts or URL changes
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const search = params.get("search");
+    
+    if (search) {
+      setSearchQuery(search);
+    } else {
+      setSearchQuery("");
+    }
+  }, [location.search]);
+
   // Fetch authors when component mounts
   useEffect(() => {
     const fetchAuthors = async () => {
@@ -188,6 +208,11 @@ export default function ShopPage() {
           url += `&category_id=${parseInt(selectedCategory, 10)}`;
         }
         
+        // Add search query if present
+        if (searchQuery) {
+          url += `&search=${encodeURIComponent(searchQuery)}`;
+        }
+        
         console.log("Fetching total books count with URL:", url);
         
         const response = await axios.get(url);
@@ -203,7 +228,7 @@ export default function ShopPage() {
     };
 
     fetchTotalBooks();
-  }, [selectedOption, selectedAuthor, star, selectedCategory]); // Re-fetch when any filter changes
+  }, [selectedOption, selectedAuthor, star, selectedCategory, searchQuery]); // Add searchQuery to dependencies
 
   // Fetch paginated books
   useEffect(() => {
@@ -230,6 +255,11 @@ export default function ShopPage() {
           url += `&category_id=${parseInt(selectedCategory, 10)}`;
         }
         
+        // Add search query if present
+        if (searchQuery) {
+          url += `&search=${encodeURIComponent(searchQuery)}`;
+        }
+        
         console.log("Fetching books with URL:", url);
         
         const response = await axios.get(url);
@@ -243,7 +273,7 @@ export default function ShopPage() {
     };
 
     fetchBooks();
-  }, [selectedOption, showPage, currentPage, selectedAuthor, star, selectedCategory]);
+  }, [selectedOption, showPage, currentPage, selectedAuthor, star, selectedCategory, searchQuery]); // Add searchQuery to dependencies
 
   // Calculate total pages - ensure we don't show extra pages when records < showPage
   const totalPages = totalBooks <= 0 ? 1 : Math.ceil(totalBooks / showPage);
@@ -282,17 +312,32 @@ export default function ShopPage() {
 
         {/* Filter Section */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-          <div className="flex flex-row">
-          <p className="text-lg">Filter By:
-          </p>
-          <p className="text-lg ml-40">
-            {totalBooks === 0 ? 
-              "0 results found" : 
-              `Show ${Math.max(1, (showPage * (currentPage - 1)) + 1)} - ${Math.min(totalBooks, currentPage * showPage)} of ${totalBooks}`
-            }
-          </p>
+          <div className="flex flex-col md:flex-row items-start md:items-center">
+            <p className="text-lg">Filter By:
+            </p>
+            {searchQuery && (
+              <div className="ml-4 bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center">
+                <span>Search: {searchQuery}</span>
+                <button 
+                  onClick={() => {
+                    setSearchQuery("");
+                    navigate("/product", { replace: true });
+                  }}
+                  className="ml-2 text-blue-600 hover:text-blue-800"
+                  aria-label="Clear search"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            <p className="text-lg ml-4 md:ml-40">
+              {totalBooks === 0 ? 
+                "0 results found" : 
+                `Show ${Math.max(1, (showPage * (currentPage - 1)) + 1)} - ${Math.min(totalBooks, currentPage * showPage)} of ${totalBooks}`
+              }
+            </p>
           </div>
-         
+          
           <div className="flex flex-row gap-10">
             <Dropdown
               selectedOption={selectedOption}
@@ -310,125 +355,143 @@ export default function ShopPage() {
 
         {/* Flex Layout Section */}
         <div className="flex flex-row">
-          {/* Left Sidebar with Filter Dropdowns */}
+          {/* Left Sidebar with Filter Accordions */}
           <div className="mr-10 flex-[1]">
-            {/* Category Dropdown */}
-            <div className="border border-gray-300 rounded-md p-4 mb-4 w-48 relative">
-              <h2 className="text-lg font-bold mb-2">Category</h2>
-              <div className="relative">
-                <button 
-                  onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
-                  className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white text-left flex justify-between items-center"
+            {/* Category Accordion */}
+            <div className="border border-gray-300 rounded-md mb-4 w-48 overflow-hidden">
+              <button 
+                onClick={() => setCategoryDropdownOpen(!categoryDropdownOpen)}
+                className="w-full px-4 py-3 bg-gray-100 text-left font-bold flex justify-between items-center"
+              >
+                <h2 className="text-lg">Category</h2>
+                <svg 
+                  className={`w-4 h-4 transition-transform ${categoryDropdownOpen ? 'transform rotate-180' : ''}`} 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24" 
+                  xmlns="http://www.w3.org/2000/svg"
                 >
-                  <span>
-                    {selectedCategory 
-                      ? category.find(c => c.id === parseInt(selectedCategory, 10))?.category_name || 'All Categories' 
-                      : 'All Categories'}
-                  </span>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                  </svg>
-                </button>
-                
-                {categoryDropdownOpen && (
-                  <div className="absolute left-0 top-full mt-1 w-full bg-white border border-gray-300 rounded shadow-lg z-10 max-h-60 overflow-y-auto">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </button>
+              
+              <div className={`transition-all duration-300 ease-in-out ${categoryDropdownOpen ? 'max-h-60' : 'max-h-0'} overflow-y-auto`}>
+                <div className="p-4">
+                  <div 
+                    className={`px-2 py-1 mb-1 rounded cursor-pointer ${selectedCategory === '' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
+                    onClick={() => {
+                      setSelectedCategory('');
+                      setCurrentPage(1);
+                    }}
+                  >
+                    All Categories
+                  </div>
+                  {category.map(cat => (
                     <div 
-                      className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                      key={cat.id} 
+                      className={`px-2 py-1 mb-1 rounded cursor-pointer ${selectedCategory === cat.id.toString() ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
                       onClick={() => {
-                        setSelectedCategory('');
-                        setCategoryDropdownOpen(false);
+                        setSelectedCategory(cat.id.toString());
                         setCurrentPage(1);
+                        console.log("Category selected:", cat.id, cat.category_name);
                       }}
                     >
-                      All Categories
+                      {cat.category_name}
                     </div>
-                    {category.map(cat => (
-                      <div 
-                        key={cat.id} 
-                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                        onClick={() => {
-                          setSelectedCategory(cat.id.toString());
-                          setCategoryDropdownOpen(false);
-                          setCurrentPage(1);
-                          console.log("Category selected:", cat.id, cat.category_name);
-                        }}
-                      >
-                        {cat.category_name}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
             </div>
                 
-            {/* Author Dropdown */}
-            <div className="border border-gray-300 rounded-md p-4 mb-4 w-48 relative author-dropdown">
-              <h2 className="text-lg font-bold mb-2">Author</h2>
-              <div className="relative">
-                <button 
-                  onClick={() => setAuthorDropdownOpen(!authorDropdownOpen)}
-                  className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white text-left flex justify-between items-center"
+            {/* Author Accordion */}
+            <div className="border border-gray-300 rounded-md mb-4 w-48 overflow-hidden">
+              <button 
+                onClick={() => setAuthorDropdownOpen(!authorDropdownOpen)}
+                className="w-full px-4 py-3 bg-gray-100 text-left font-bold flex justify-between items-center"
+              >
+                <h2 className="text-lg">Author</h2>
+                <svg 
+                  className={`w-4 h-4 transition-transform ${authorDropdownOpen ? 'transform rotate-180' : ''}`} 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24" 
+                  xmlns="http://www.w3.org/2000/svg"
                 >
-                  <span>
-                    {selectedAuthor 
-                      ? authors.find(a => a.id === parseInt(selectedAuthor, 10))?.author_name || 'All Authors' 
-                      : 'All Authors'}
-                  </span>
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                  </svg>
-                </button>
-                
-                {authorDropdownOpen && (
-                  <div className="absolute left-0 top-full mt-1 w-full bg-white border border-gray-300 rounded shadow-lg z-10 max-h-60 overflow-y-auto">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </button>
+              
+              <div className={`transition-all duration-300 ease-in-out ${authorDropdownOpen ? 'max-h-60' : 'max-h-0'} overflow-y-auto`}>
+                <div className="p-4">
+                  <div 
+                    className={`px-2 py-1 mb-1 rounded cursor-pointer ${selectedAuthor === '' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
+                    onClick={() => {
+                      setSelectedAuthor('');
+                      setCurrentPage(1);
+                    }}
+                  >
+                    All Authors
+                  </div>
+                  {authors.map(author => (
                     <div 
-                      className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
+                      key={author.id} 
+                      className={`px-2 py-1 mb-1 rounded cursor-pointer ${selectedAuthor === author.id.toString() ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
                       onClick={() => {
-                        setSelectedAuthor('');
-                        setAuthorDropdownOpen(false);
-                        setCurrentPage(1); // Reset to page 1 when filter changes
+                        setSelectedAuthor(author.id.toString());
+                        setCurrentPage(1);
+                        console.log("Selected author:", author.id, author.author_name);
                       }}
                     >
-                      All Authors
+                      {author.author_name}
                     </div>
-                    {authors.map(author => (
-                      <div 
-                        key={author.id} 
-                        className="px-4 py-2 hover:bg-gray-100 cursor-pointer"
-                        onClick={() => {
-                          setSelectedAuthor(author.id.toString());
-                          setAuthorDropdownOpen(false);
-                          setCurrentPage(1); // Reset to page 1 when filter changes
-                          console.log("Selected author:", author.id, author.author_name);
-                        }}
-                      >
-                        {author.author_name}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                  ))}
+                </div>
               </div>
             </div>
 
-            {/* Rating Dropdown */}
-            <div className="border border-gray-300 rounded-md p-4 w-48">
-              <h2 className="text-lg font-bold mb-2">Rating</h2>
-              <select
-                className="w-full px-2 py-1 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                onChange={(e) => {
-                  setStar(e.target.value);
-                  setCurrentPage(1); // Reset to page 1 when rating filter changes
-                  console.log("Rating selected:", e.target.value);
-                }}
-                value={star}
+            {/* Rating Accordion */}
+            <div className="border border-gray-300 rounded-md w-48 overflow-hidden">
+              <button 
+                onClick={() => setRatingDropdownOpen(!ratingDropdownOpen)}
+                className="w-full px-4 py-3 bg-gray-100 text-left font-bold flex justify-between items-center"
               >
-                <option value="">All Ratings</option>
-                <option value="5">5 Stars</option>
-                <option value="4">4 Stars & Up</option>
-                <option value="3">3 Stars & Up</option>
-                <option value="2">2 Stars & Up</option>
-                <option value="1">1 Star & Up</option>
-              </select>
+                <h2 className="text-lg">Rating</h2>
+                <svg 
+                  className={`w-4 h-4 transition-transform ${ratingDropdownOpen ? 'transform rotate-180' : ''}`} 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24" 
+                  xmlns="http://www.w3.org/2000/svg"
+                >
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                </svg>
+              </button>
+              
+              <div className={`transition-all duration-300 ease-in-out ${ratingDropdownOpen ? 'max-h-60' : 'max-h-0'} overflow-y-auto`}>
+                <div className="p-4">
+                  <div 
+                    className={`px-2 py-1 mb-1 rounded cursor-pointer ${star === '' ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
+                    onClick={() => {
+                      setStar('');
+                      setCurrentPage(1);
+                    }}
+                  >
+                    All Ratings
+                  </div>
+                  {['5', '4', '3', '2', '1'].map(rating => (
+                    <div 
+                      key={rating} 
+                      className={`px-2 py-1 mb-1 rounded cursor-pointer ${star === rating ? 'bg-blue-100 text-blue-800' : 'hover:bg-gray-100'}`}
+                      onClick={() => {
+                        setStar(rating);
+                        setCurrentPage(1);
+                      }}
+                    >
+                      {rating} {rating === '1' ? 'Star' : 'Stars'} & Up
+                    </div>
+                  ))}
+                </div>
+              </div>
             </div>
           </div>
 
@@ -535,6 +598,14 @@ export default function ShopPage() {
     </>
   );
 }
+
+
+
+
+
+
+
+
 
 
 
