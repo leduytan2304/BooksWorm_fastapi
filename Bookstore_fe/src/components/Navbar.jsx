@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { assets } from "../assets/assets";
 import Cookies from "js-cookie";
-import { ShoppingCartIcon } from '@heroicons/react/24/outline';
+import { ShoppingCartIcon, MagnifyingGlassIcon, XMarkIcon } from '@heroicons/react/24/outline';
 import LoginPopup from "./LoginPopup";
 import axios from 'axios';
 
@@ -15,7 +15,21 @@ export default function Navbar() {
   const navigate = useNavigate();
   const [cartItemCount, setCartItemCount] = useState(0);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
-  const location = useLocation(); // Get current location
+  const location = useLocation();
+  
+  // Add search state
+  const [searchQuery, setSearchQuery] = useState('');
+  const [isSearching, setIsSearching] = useState(false);
+
+  // Handle search submission
+  const handleSearch = (e) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      // Navigate to shop page with search query
+      navigate(`/product?search=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery('');
+    }
+  };
 
   useEffect(() => {
     document.body.style.overflow = showMobileMenu ? "hidden" : "auto";
@@ -222,6 +236,40 @@ export default function Navbar() {
               </Link>
             </li>
             
+            {/* Add search bar */}
+            <li>
+              <form onSubmit={handleSearch} className="relative">
+                <input
+                  type="text"
+                  placeholder="Search books..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="py-1 px-3 pr-8 rounded-full text-black text-sm w-40 focus:w-56 transition-all duration-300"
+                />
+                {searchQuery && (
+                  <button 
+                    type="button"
+                    onClick={() => {
+                      setSearchQuery('');
+                      // If we're on the shop page, navigate to it without search params
+                      if (location.pathname === '/product') {
+                        navigate('/product');
+                      }
+                    }}
+                    className="absolute right-8 top-1/2 transform -translate-y-1/2 text-gray-600"
+                  >
+                    <XMarkIcon className="h-4 w-4" />
+                  </button>
+                )}
+                <button 
+                  type="submit" 
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-600"
+                >
+                  <MagnifyingGlassIcon className="h-4 w-4" />
+                </button>
+              </form>
+            </li>
+            
             
             {isLoggedIn ? (
               <>
@@ -298,6 +346,40 @@ export default function Navbar() {
               </span>
             </Link>
             
+            {/* Add search bar for mobile */}
+            <form onSubmit={handleSearch} className="relative w-full mb-4">
+              <input
+                type="text"
+                placeholder="Search books..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="py-2 px-4 pr-10 rounded-full text-black w-full"
+              />
+              {searchQuery && (
+                <button 
+                  type="button"
+                  onClick={() => {
+                    setSearchQuery('');
+                    // If we're on the shop page, navigate to it without search params
+                    if (location.pathname === '/product') {
+                      navigate('/product');
+                      setShowMobileMenu(false);
+                    }
+                  }}
+                  className="absolute right-10 top-1/2 transform -translate-y-1/2 text-gray-600"
+                >
+                  <XMarkIcon className="h-5 w-5" />
+                </button>
+              )}
+              <button 
+                type="submit" 
+                className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-600"
+                onClick={() => setShowMobileMenu(false)}
+              >
+                <MagnifyingGlassIcon className="h-5 w-5" />
+              </button>
+            </form>
+            
             {isLoggedIn ? (
               <>
                 <span className="px-4 py-2">Hi {displayName}</span>
@@ -335,6 +417,13 @@ export default function Navbar() {
     </>
   );
 }
+
+
+
+
+
+
+
 
 
 

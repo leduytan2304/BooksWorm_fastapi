@@ -9,15 +9,19 @@ def get_books_with_filter(
     author_id: Optional[int] = None,
     category_id: Optional[int] = None,
     star: Optional[float] = None,
+    search: Optional[str] = None,
     limit: Optional[int] = None,
     offset: int = 0
 ) -> List[Dict[str, Any]]:
     """
-    Get books with filtering and sorting options
+    Get books with filtering, sorting, and search options
     """
     try:
         # Convert star to float if it's not None
         star_value = float(star) if star is not None else 0
+        
+        # Prepare search parameter
+        search_term = f"%{search}%" if search else None
         
         if filter_by == 'discount_desc':
             sql_query = text("""
@@ -65,6 +69,9 @@ def get_books_with_filter(
                 JOIN author a ON b.author_id = a.id
                 WHERE (:author_id IS NULL OR b.author_id = :author_id)
                   AND (:category_id IS NULL OR b.category_id = :category_id)
+                  AND (:search_term IS NULL OR 
+                       LOWER(b.book_title) LIKE LOWER(:search_term) OR 
+                       LOWER(a.author_name) LIKE LOWER(:search_term))
                 GROUP BY 
                     b.id, 
                     b.book_title,
@@ -120,6 +127,9 @@ def get_books_with_filter(
             JOIN author a ON b.author_id = a.id
             WHERE (:author_id IS NULL OR b.author_id = :author_id)
               AND (:category_id IS NULL OR b.category_id = :category_id)
+              AND (:search_term IS NULL OR 
+                   LOWER(b.book_title) LIKE LOWER(:search_term) OR 
+                   LOWER(a.author_name) LIKE LOWER(:search_term))
             GROUP BY
                 b.id,
                 b.book_title,
@@ -173,6 +183,9 @@ def get_books_with_filter(
             JOIN author a ON b.author_id = a.id
             WHERE (:author_id IS NULL OR b.author_id = :author_id)
               AND (:category_id IS NULL OR b.category_id = :category_id)
+              AND (:search_term IS NULL OR 
+                   LOWER(b.book_title) LIKE LOWER(:search_term) OR 
+                   LOWER(a.author_name) LIKE LOWER(:search_term))
             GROUP BY 
                 b.id, 
                 b.book_title,
@@ -225,6 +238,9 @@ def get_books_with_filter(
             JOIN author a ON b.author_id = a.id
             WHERE (:author_id IS NULL OR b.author_id = :author_id)
               AND (:category_id IS NULL OR b.category_id = :category_id)
+              AND (:search_term IS NULL OR 
+                   LOWER(b.book_title) LIKE LOWER(:search_term) OR 
+                   LOWER(a.author_name) LIKE LOWER(:search_term))
             GROUP BY 
                 b.id, 
                 b.book_title,
@@ -248,6 +264,7 @@ def get_books_with_filter(
             "author_id": author_id,
             "category_id": category_id,
             "star_value": star_value,
+            "search_term": search_term,
             "offset": offset, 
             "limit": limit if limit else 100
         })
@@ -546,3 +563,8 @@ def get_book_by_id(db: Session, book_id: int) -> Dict[str, Any]:
             raise HTTPException(status_code=404, detail="Book not found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+
+
+

@@ -36,13 +36,14 @@ async def get_books(
     author_id: Optional[int] = Query(None, description="Filter by author ID"),
     category_id: Optional[int] = Query(None, description="Filter by category ID"),
     star: Optional[float] = Query(None, ge=0, le=5, description="Minimum average rating star"),
+    search: Optional[str] = Query(None, description="Search by book title or author name"),
     limit: Optional[int] = Query(None, ge=1, description="Maximum number of records to return"),
     offset: Optional[int] = Query(0, ge=0, description="Number of books to skip"),
     db: Session = Depends(get_db)
 ):
     try:
         # Add debug logging
-        print(f"Received parameters: filterBy={filterBy}, author_id={author_id}, category_id={category_id}, star={star}, limit={limit}, offset={offset}")
+        print(f"Received parameters: filterBy={filterBy}, author_id={author_id}, category_id={category_id}, star={star}, search={search}, limit={limit}, offset={offset}")
         
         # Use the service function to get books with filters
         books = get_books_with_filter(
@@ -51,6 +52,7 @@ async def get_books(
             author_id=author_id,
             category_id=category_id,
             star=star,
+            search=search,
             limit=limit,
             offset=offset
         )

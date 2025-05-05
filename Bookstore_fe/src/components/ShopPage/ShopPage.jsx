@@ -2,7 +2,8 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Card from "./Card";
 import Pagination from "./Pagination";
-import { ChevronDownIcon, MinusIcon, PlusIcon, ShoppingCartIcon } from '@heroicons/react/24/solid';
+import { useLocation, useNavigate } from "react-router-dom";
+import { ChevronDownIcon, MinusIcon, PlusIcon, ShoppingCartIcon, XMarkIcon } from '@heroicons/react/24/solid';
 
 function Dropdown({ selectedOption, setSelectedOption, setCurrentPage }) {
   const [isOpen, setIsOpen] = useState(false);
@@ -135,6 +136,32 @@ export default function ShopPage() {
   const [category, setCategory] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
   const [ratingDropdownOpen, setRatingDropdownOpen] = useState(false);
+  
+  // Add search state and navigation
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState("");
+  
+  // Function to clear search filter
+  const clearSearchFilter = () => {
+    setSearchQuery("");
+    // Update URL without search parameter
+    const params = new URLSearchParams(location.search);
+    params.delete("search");
+    navigate({ search: params.toString() });
+  };
+  
+  // Extract search query from URL on component mount or URL change
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const search = params.get("search");
+    setSearchQuery(search || "");
+    
+    // Reset to page 1 when search changes
+    if (search) {
+      setCurrentPage(1);
+    }
+  }, [location.search]);
   // Fetch authors when component mounts
   useEffect(() => {
     const fetchAuthors = async () => {
@@ -189,6 +216,11 @@ export default function ShopPage() {
           url += `&category_id=${parseInt(selectedCategory, 10)}`;
         }
         
+        // Add search query if present
+        if (searchQuery) {
+          url += `&search=${encodeURIComponent(searchQuery)}`;
+        }
+        
         console.log("Fetching total books count with URL:", url);
         
         const response = await axios.get(url);
@@ -204,7 +236,7 @@ export default function ShopPage() {
     };
 
     fetchTotalBooks();
-  }, [selectedOption, selectedAuthor, star, selectedCategory]); // Re-fetch when any filter changes
+  }, [selectedOption, selectedAuthor, star, selectedCategory, searchQuery]); // Add searchQuery to dependencies
 
   // Fetch paginated books
   useEffect(() => {
@@ -231,6 +263,11 @@ export default function ShopPage() {
           url += `&category_id=${parseInt(selectedCategory, 10)}`;
         }
         
+        // Add search query if present
+        if (searchQuery) {
+          url += `&search=${encodeURIComponent(searchQuery)}`;
+        }
+        
         console.log("Fetching books with URL:", url);
         
         const response = await axios.get(url);
@@ -244,7 +281,7 @@ export default function ShopPage() {
     };
 
     fetchBooks();
-  }, [selectedOption, showPage, currentPage, selectedAuthor, star, selectedCategory]);
+  }, [selectedOption, showPage, currentPage, selectedAuthor, star, selectedCategory, searchQuery]); // Add searchQuery to dependencies
 
   // Calculate total pages - ensure we don't show extra pages when records < showPage
   const totalPages = totalBooks <= 0 ? 1 : Math.ceil(totalBooks / showPage);
@@ -262,23 +299,76 @@ export default function ShopPage() {
 
     fetchCategories();
   }, []);
+  // Function to clear all filters
+  const clearAllFilters = () => {
+    setSelectedAuthor("");
+    setStar("");
+    setSelectedCategory("");
+    setSearchQuery("");
+    setCurrentPage(1);
+    
+    // Update URL without any filter parameters
+    navigate("/product");
+  };
+
   return (
     <>
       <div
         className="container relative mx-auto py-4 pt-20 px-6 md:px-20 lg:px-32 my-20 w-full"
         id="Projects"
       >
-        <div className="flex items-center mb-6 border-b border-gray-400">
-          <h1 className="text-2xl sm:text-4xl font-bold mb-2 text-left">
-            Shop Page
-            
-          </h1>
-          <p className="text-lg ml-5">Filter By: {
-            (selectedAuthor ? authors.find(a => a.id === parseInt(selectedAuthor, 10))?.author_name || '' : 'All Authors') + 
-            (star ? ` / ${star} Star${star === '1' ? '' : 's'} & Up` : ' / All Ratings') + 
-            (selectedCategory ? ` / ${category.find(c => c.id === parseInt(selectedCategory, 10))?.category_name || ''}` : '/ All Categories')
-          }</p>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 border-b border-gray-400 pb-2">
+          <div>
+            <h1 className="text-2xl sm:text-4xl font-bold mb-2 text-left">
+              Shop Page
+            </h1>
+            <p className="text-sm sm:text-lg">
+              Filter By: 
+              {searchQuery && (
+                <span className="inline-flex items-center bg-blue-100 text-blue-800 rounded-full px-3 py-1 text-sm font-medium mr-2">
+                  "{searchQuery}" 
+                  <button 
+                    onClick={clearSearchFilter}
+                    className="ml-1 text-blue-500 hover:text-blue-700"
+                  >
+                    <XMarkIcon className="h-4 w-4" />
+                  </button>
+                </span>
+              )}
+              {selectedAuthor ? (
+                <span className="mr-2">
+                  {authors.find(a => a.id === parseInt(selectedAuthor, 10))?.author_name || ''}
+                </span>
+              ) : (
+                <span className="mr-2">All Authors</span>
+              )}
+              {star ? (
+                <span className="mr-2">
+                  / {star} Star{star === '1' ? '' : 's'} & Up
+                </span>
+              ) : (
+                <span className="mr-2">/ All Ratings</span>
+              )}
+              {selectedCategory ? (
+                <span>
+                  / {category.find(c => c.id === parseInt(selectedCategory, 10))?.category_name || ''}
+                </span>
+              ) : (
+                <span>/ All Categories</span>
+              )}
+            </p>
+          </div>
           
+          {/* Add Clear All Filters button */}
+          {(searchQuery || selectedAuthor || star || selectedCategory) && (
+            <button
+              onClick={clearAllFilters}
+              className="mt-2 sm:mt-0 px-3 py-1 bg-gray-200 hover:bg-gray-300 rounded-md text-sm flex items-center"
+            >
+              <XMarkIcon className="h-4 w-4 mr-1" />
+              Clear All Filters
+            </button>
+          )}
         </div>
 
         {/* Filter Section */}
@@ -554,6 +644,14 @@ export default function ShopPage() {
     </>
   );
 }
+
+
+
+
+
+
+
+
 
 
 
