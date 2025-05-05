@@ -2,7 +2,6 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import Card from "./Card";
 import Pagination from "./Pagination";
-import { useLocation, useNavigate } from "react-router-dom";
 import { ChevronDownIcon, MinusIcon, PlusIcon, ShoppingCartIcon } from '@heroicons/react/24/solid';
 
 function Dropdown({ selectedOption, setSelectedOption, setCurrentPage }) {
@@ -122,10 +121,6 @@ function DropdownShowPage({ showPage, setShowPage, setCurrentPage }) {
 }
 
 export default function ShopPage() {
-  const location = useLocation();
-  const navigate = useNavigate();
-  const queryParams = new URLSearchParams(location.search);
-  
   const [books, setBooks] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedOption, setSelectedOption] = useState("discount_desc");
@@ -139,21 +134,7 @@ export default function ShopPage() {
   const [star, setStar] = useState("");
   const [category, setCategory] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState("");
-  const [searchQuery, setSearchQuery] = useState(queryParams.get("search") || "");
   const [ratingDropdownOpen, setRatingDropdownOpen] = useState(false);
-  
-  // Parse URL parameters when component mounts or URL changes
-  useEffect(() => {
-    const params = new URLSearchParams(location.search);
-    const search = params.get("search");
-    
-    if (search) {
-      setSearchQuery(search);
-    } else {
-      setSearchQuery("");
-    }
-  }, [location.search]);
-
   // Fetch authors when component mounts
   useEffect(() => {
     const fetchAuthors = async () => {
@@ -208,11 +189,6 @@ export default function ShopPage() {
           url += `&category_id=${parseInt(selectedCategory, 10)}`;
         }
         
-        // Add search query if present
-        if (searchQuery) {
-          url += `&search=${encodeURIComponent(searchQuery)}`;
-        }
-        
         console.log("Fetching total books count with URL:", url);
         
         const response = await axios.get(url);
@@ -228,7 +204,7 @@ export default function ShopPage() {
     };
 
     fetchTotalBooks();
-  }, [selectedOption, selectedAuthor, star, selectedCategory, searchQuery]); // Add searchQuery to dependencies
+  }, [selectedOption, selectedAuthor, star, selectedCategory]); // Re-fetch when any filter changes
 
   // Fetch paginated books
   useEffect(() => {
@@ -255,11 +231,6 @@ export default function ShopPage() {
           url += `&category_id=${parseInt(selectedCategory, 10)}`;
         }
         
-        // Add search query if present
-        if (searchQuery) {
-          url += `&search=${encodeURIComponent(searchQuery)}`;
-        }
-        
         console.log("Fetching books with URL:", url);
         
         const response = await axios.get(url);
@@ -273,7 +244,7 @@ export default function ShopPage() {
     };
 
     fetchBooks();
-  }, [selectedOption, showPage, currentPage, selectedAuthor, star, selectedCategory, searchQuery]); // Add searchQuery to dependencies
+  }, [selectedOption, showPage, currentPage, selectedAuthor, star, selectedCategory]);
 
   // Calculate total pages - ensure we don't show extra pages when records < showPage
   const totalPages = totalBooks <= 0 ? 1 : Math.ceil(totalBooks / showPage);
@@ -312,32 +283,17 @@ export default function ShopPage() {
 
         {/* Filter Section */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-6 gap-4">
-          <div className="flex flex-col md:flex-row items-start md:items-center">
-            <p className="text-lg">Filter By:
-            </p>
-            {searchQuery && (
-              <div className="ml-4 bg-blue-100 text-blue-800 px-3 py-1 rounded-full flex items-center">
-                <span>Search: {searchQuery}</span>
-                <button 
-                  onClick={() => {
-                    setSearchQuery("");
-                    navigate("/product", { replace: true });
-                  }}
-                  className="ml-2 text-blue-600 hover:text-blue-800"
-                  aria-label="Clear search"
-                >
-                  ×
-                </button>
-              </div>
-            )}
-            <p className="text-lg ml-4 md:ml-40">
-              {totalBooks === 0 ? 
-                "0 results found" : 
-                `Show ${Math.max(1, (showPage * (currentPage - 1)) + 1)} - ${Math.min(totalBooks, currentPage * showPage)} of ${totalBooks}`
-              }
-            </p>
+          <div className="flex flex-row">
+          <p className="text-lg">Filter By:
+          </p>
+          <p className="text-lg ml-40">
+            {totalBooks === 0 ? 
+              "0 results found" : 
+              `Show ${Math.max(1, (showPage * (currentPage - 1)) + 1)} - ${Math.min(totalBooks, currentPage * showPage)} of ${totalBooks}`
+            }
+          </p>
           </div>
-          
+         
           <div className="flex flex-row gap-10">
             <Dropdown
               selectedOption={selectedOption}
@@ -598,55 +554,6 @@ export default function ShopPage() {
     </>
   );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

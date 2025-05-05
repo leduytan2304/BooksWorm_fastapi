@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { assets } from "../assets/assets";
 import Cookies from "js-cookie";
-import { ShoppingCartIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
+import { ShoppingCartIcon } from '@heroicons/react/24/outline';
 import LoginPopup from "./LoginPopup";
 import axios from 'axios';
 
@@ -16,8 +16,6 @@ export default function Navbar() {
   const [cartItemCount, setCartItemCount] = useState(0);
   const [showLoginPopup, setShowLoginPopup] = useState(false);
   const location = useLocation(); // Get current location
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showSearch, setShowSearch] = useState(false);
 
   useEffect(() => {
     document.body.style.overflow = showMobileMenu ? "hidden" : "auto";
@@ -187,55 +185,12 @@ export default function Navbar() {
     return location.pathname === path || (path !== '/' && location.pathname.startsWith(path));
   };
 
-  // Handle search submission
-  const handleSearch = (e) => {
-    e.preventDefault();
-    if (searchQuery.trim()) {
-      // Navigate to shop page with search query
-      navigate(`/product?search=${encodeURIComponent(searchQuery.trim())}`);
-      setShowSearch(false); // Hide search bar after submission
-    }
-  };
-
-  // Toggle search bar visibility
-  const toggleSearch = () => {
-    setShowSearch(!showSearch);
-    if (!showSearch) {
-      // Focus the search input when it becomes visible
-      setTimeout(() => {
-        const searchInput = document.getElementById('navbar-search-input');
-        if (searchInput) searchInput.focus();
-      }, 100);
-    }
-  };
-
   return (
     <>
       <div className="fixed top-0 left-0 w-full z-50 bg-gray-800">
-        <div className="container mx-auto flex items-center py-4 px-6 md:px-20 lg:px-32 bg-transparent">
-          {/* Logo */}
-          <img src={assets.logo} alt="Bookstore Logo" className="mr-4" />
-          
-          {/* Search bar - visible on desktop */}
-          <div className="hidden md:flex flex-grow max-w-md mr-4">
-            <form onSubmit={handleSearch} className="flex w-full">
-              <input
-                type="text"
-                placeholder="Search for books..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-grow py-2 px-4 rounded-l-md focus:outline-none text-black"
-              />
-              <button 
-                type="submit"
-                className="bg-blue-500 text-white py-2 px-4 rounded-r-md hover:bg-blue-600"
-              >
-                <MagnifyingGlassIcon className="h-5 w-5" />
-              </button>
-            </form>
-          </div>
+        <div className="container mx-auto flex justify-between items-center py-4 px-6 md:px-20 lg:px-32 bg-transparent">
+          <img src={assets.logo} alt="Bookstore Logo" />
 
-          {/* Navigation links */}
           <ul className="hidden md:flex items-center gap-7 text-white ml-auto">
             <Link 
               to="/" 
@@ -267,6 +222,7 @@ export default function Navbar() {
               </Link>
             </li>
             
+            
             {isLoggedIn ? (
               <>
                 <span className="text-white">Hi {displayName}</span>
@@ -287,52 +243,13 @@ export default function Navbar() {
             )}
           </ul>
 
-          {/* Mobile menu button and search icon */}
-          <div className="md:hidden flex items-center ml-auto">
-            <button 
-              onClick={toggleSearch}
-              className="text-white mr-4"
-              aria-label="Search"
-            >
-              <MagnifyingGlassIcon className="h-6 w-6" />
-            </button>
-            <img
-              onClick={() => setShowMobileMenu(true)}
-              src={assets.menu_icon}
-              className="w-7"
-              alt="Menu"
-            />
-          </div>
+          <img
+            onClick={() => setShowMobileMenu(true)}
+            src={assets.menu_icon}
+            className="md:hidden w-7"
+            alt="Menu"
+          />
         </div>
-
-        {/* Mobile search bar - shown when search is toggled on mobile */}
-        {showSearch && (
-          <div className="md:hidden absolute top-16 left-0 w-full bg-gray-800 py-3 px-6 z-50">
-            <form onSubmit={handleSearch} className="flex items-center">
-              <input
-                id="navbar-search-input"
-                type="text"
-                placeholder="Search for books..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="flex-grow py-2 px-4 rounded-l-md focus:outline-none"
-              />
-              <button 
-                type="submit"
-                className="bg-blue-500 text-white py-2 px-4 rounded-r-md hover:bg-blue-600"
-              >
-                Search
-              </button>
-              <button 
-                type="button"
-                onClick={toggleSearch}
-                className="ml-2 text-white hover:text-gray-400"
-              >
-                Cancel
-              </button>
-            </form>
-          </div>
-        )}
 
         {/* Mobile menu */}
         <div
@@ -381,17 +298,6 @@ export default function Navbar() {
               </span>
             </Link>
             
-            {/* Search option in mobile menu */}
-            <button
-              onClick={() => {
-                setShowMobileMenu(false);
-                setTimeout(() => toggleSearch(), 300); // Toggle search after menu closes
-              }}
-              className="px-4 py-2 rounded-full inline-block"
-            >
-              Search
-            </button>
-            
             {isLoggedIn ? (
               <>
                 <span className="px-4 py-2">Hi {displayName}</span>
@@ -429,14 +335,6 @@ export default function Navbar() {
     </>
   );
 }
-
-
-
-
-
-
-
-
 
 
 

@@ -13,8 +13,7 @@ from services.book_service import (
     get_popular_books,
     get_books_by_category,
     get_onsale_books,
-    get_book_by_id,
-    search_books
+    get_book_by_id
 )
 
 class SortOption(str, Enum):
@@ -39,37 +38,22 @@ async def get_books(
     star: Optional[float] = Query(None, ge=0, le=5, description="Minimum average rating star"),
     limit: Optional[int] = Query(None, ge=1, description="Maximum number of records to return"),
     offset: Optional[int] = Query(0, ge=0, description="Number of books to skip"),
-    search: Optional[str] = Query(None, description="Search query for book title or author"),
     db: Session = Depends(get_db)
 ):
     try:
         # Add debug logging
-        print(f"Received parameters: filterBy={filterBy}, author_id={author_id}, category_id={category_id}, star={star}, limit={limit}, offset={offset}, search={search}")
+        print(f"Received parameters: filterBy={filterBy}, author_id={author_id}, category_id={category_id}, star={star}, limit={limit}, offset={offset}")
         
-        # If search query is provided, use search function
-        if search:
-            print(f"Using search_books function with query: {search}")
-            books = search_books(
-                db=db,
-                search_query=search,
-                filter_by=filterBy,
-                author_id=author_id,
-                category_id=category_id,
-                star=star,
-                limit=limit,
-                offset=offset
-            )
-        else:
-            # Use the service function to get books with filters
-            books = get_books_with_filter(
-                db=db,
-                filter_by=filterBy,
-                author_id=author_id,
-                category_id=category_id,
-                star=star,
-                limit=limit,
-                offset=offset
-            )
+        # Use the service function to get books with filters
+        books = get_books_with_filter(
+            db=db,
+            filter_by=filterBy,
+            author_id=author_id,
+            category_id=category_id,
+            star=star,
+            limit=limit,
+            offset=offset
+        )
         
         # Add debug logging
         print(f"Query returned {len(books)} books")
@@ -77,9 +61,6 @@ async def get_books(
         return books
         
     except Exception as e:
-        print(f"Error in get_books endpoint: {str(e)}")
-        import traceback
-        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @router.get("/books/recommended", response_model=list[Book])
